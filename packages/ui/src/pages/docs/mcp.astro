@@ -1,0 +1,207 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+---
+
+<DocsLayout title="MCP Server" activeSection="mcp">
+  <h1>MCP Server</h1>
+
+  <p>
+    Flick ships an MCP (Model Context Protocol) server that lets AI agents &mdash; Claude,
+    Cursor, Windsurf, etc. &mdash; manage feature flags through structured tools.
+  </p>
+
+  <h2>What Can AI Agents Do?</h2>
+
+  <ul>
+    <li>List, create, toggle, and archive feature flags</li>
+    <li>Manage environments and targeting groups</li>
+    <li>Evaluate flags for specific user contexts</li>
+    <li>Read the audit log</li>
+    <li>Browse projects, flags, and configs as resources</li>
+  </ul>
+
+  <h2>Setup</h2>
+
+  <h3>Prerequisites</h3>
+
+  <ul>
+    <li>Node.js 22+</li>
+    <li>A Flick <strong>Management</strong> API key (not an SDK key)</li>
+  </ul>
+
+  <h3>Build</h3>
+
+  <pre><code>cd packages/mcp-server
+pnpm install
+pnpm build</code></pre>
+
+  <h3>Configure in Claude Code</h3>
+
+  <p>Add to your <code>~/.claude/claude_code_config.json</code>:</p>
+
+  <pre><code>{"{"}
+  "mcpServers": {"{"}
+    "flick": {"{"}
+      "command": "node",
+      "args": ["/path/to/flick/packages/mcp-server/dist/index.js"],
+      "env": {"{"}
+        "FLICK_API_URL": "https://flick-server-production.up.railway.app/api/v1",
+        "FLICK_API_KEY": "flk_your_management_key_here"
+      {"}"}
+    {"}"}
+  {"}"}
+{"}"}</code></pre>
+
+  <h3>Configure in Cursor / Windsurf</h3>
+
+  <p>Add to your project's <code>.cursor/mcp.json</code> or equivalent:</p>
+
+  <pre><code>{"{"}
+  "mcpServers": {"{"}
+    "flick": {"{"}
+      "command": "node",
+      "args": ["./packages/mcp-server/dist/index.js"],
+      "env": {"{"}
+        "FLICK_API_URL": "https://flick-server-production.up.railway.app/api/v1",
+        "FLICK_API_KEY": "flk_your_management_key_here"
+      {"}"}
+    {"}"}
+  {"}"}
+{"}"}</code></pre>
+
+  <h3>Environment Variables</h3>
+
+  <table>
+    <thead>
+      <tr><th>Variable</th><th>Default</th><th>Description</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>FLICK_API_URL</code></td><td><code>http://localhost:3000/api/v1</code></td><td>Flick API base URL</td></tr>
+      <tr><td><code>FLICK_API_KEY</code></td><td>&mdash;</td><td>Management API key (required)</td></tr>
+    </tbody>
+  </table>
+
+  <hr />
+
+  <h2>Tools</h2>
+
+  <h3>Flags (7 tools)</h3>
+
+  <table>
+    <thead>
+      <tr><th>Tool</th><th>Description</th><th>Key Parameters</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>flick_list_flags</code></td><td>List all flags in a project</td><td><code>project_id</code></td></tr>
+      <tr><td><code>flick_get_flag</code></td><td>Get flag details</td><td><code>project_id</code>, <code>flag_id</code></td></tr>
+      <tr><td><code>flick_create_flag</code></td><td>Create a new flag</td><td><code>project_id</code>, <code>key</code>, <code>name</code>, <code>gate_type</code></td></tr>
+      <tr><td><code>flick_toggle_flag</code></td><td>Toggle flag on/off for an environment</td><td><code>project_id</code>, <code>flag_id</code>, <code>env_id</code></td></tr>
+      <tr><td><code>flick_update_flag_config</code></td><td>Update gate config (percentage, etc.)</td><td><code>project_id</code>, <code>flag_id</code>, <code>env_id</code>, <code>gate_config</code></td></tr>
+      <tr><td><code>flick_archive_flag</code></td><td>Archive a flag</td><td><code>project_id</code>, <code>flag_id</code></td></tr>
+      <tr><td><code>flick_evaluate_flag</code></td><td>Evaluate a flag for a context</td><td><code>env_id</code>, <code>flag_key</code>, <code>context_key</code>, <code>attributes</code></td></tr>
+    </tbody>
+  </table>
+
+  <h3>Environments (1 tool)</h3>
+
+  <table>
+    <thead>
+      <tr><th>Tool</th><th>Description</th><th>Key Parameters</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>flick_list_environments</code></td><td>List all environments</td><td><code>project_id</code></td></tr>
+    </tbody>
+  </table>
+
+  <h3>Groups (4 tools)</h3>
+
+  <table>
+    <thead>
+      <tr><th>Tool</th><th>Description</th><th>Key Parameters</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>flick_list_groups</code></td><td>List all groups</td><td><code>project_id</code></td></tr>
+      <tr><td><code>flick_create_group</code></td><td>Create a group with rules</td><td><code>project_id</code>, <code>name</code>, <code>slug</code>, <code>rules</code></td></tr>
+      <tr><td><code>flick_add_group_to_flag</code></td><td>Attach a group to a flag/env</td><td><code>project_id</code>, <code>flag_id</code>, <code>env_id</code>, <code>group_id</code></td></tr>
+      <tr><td><code>flick_remove_group_from_flag</code></td><td>Detach a group from a flag/env</td><td><code>project_id</code>, <code>flag_id</code>, <code>env_id</code>, <code>group_id</code></td></tr>
+    </tbody>
+  </table>
+
+  <h3>Audit (1 tool)</h3>
+
+  <table>
+    <thead>
+      <tr><th>Tool</th><th>Description</th><th>Key Parameters</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>flick_get_audit_log</code></td><td>View audit log entries</td><td><code>project_id</code>, <code>entity_type</code>, <code>action</code>, <code>limit</code></td></tr>
+    </tbody>
+  </table>
+
+  <hr />
+
+  <h2>Resources</h2>
+
+  <p>Resources are read-only data surfaces. AI agents can inspect these without making mutations.</p>
+
+  <table>
+    <thead>
+      <tr><th>Resource</th><th>URI</th><th>Description</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Projects</td><td><code>flick://projects</code></td><td>All projects</td></tr>
+      <tr><td>Flags</td><td><code>flick://projects/{"{slug}"}/flags</code></td><td>All flags in a project</td></tr>
+      <tr><td>Environments</td><td><code>flick://projects/{"{slug}"}/environments</code></td><td>All environments</td></tr>
+      <tr><td>Groups</td><td><code>flick://projects/{"{slug}"}/groups</code></td><td>All groups</td></tr>
+      <tr><td>Audit Log</td><td><code>flick://projects/{"{slug}"}/audit</code></td><td>Last 20 audit entries</td></tr>
+    </tbody>
+  </table>
+
+  <hr />
+
+  <h2>Example Conversations</h2>
+
+  <h3>"Create a feature flag for dark mode"</h3>
+
+  <p>The agent will:</p>
+  <ol>
+    <li>Call <code>flick_list_flags</code> to check if it already exists</li>
+    <li>Call <code>flick_create_flag</code> with <code>key: "dark-mode"</code>, <code>gate_type: "boolean"</code></li>
+    <li>Call <code>flick_list_environments</code> to find the dev environment</li>
+    <li>Call <code>flick_toggle_flag</code> to enable it in dev</li>
+  </ol>
+
+  <h3>"Roll out the new checkout to 25% of users in production"</h3>
+
+  <p>The agent will:</p>
+  <ol>
+    <li>Call <code>flick_list_flags</code> to find the checkout flag</li>
+    <li>Call <code>flick_list_environments</code> to find production</li>
+    <li>Call <code>flick_update_flag_config</code> with <code>gate_config: {"{"} percentage: 25, sticky: true {"}"}</code></li>
+    <li>Call <code>flick_toggle_flag</code> to enable it</li>
+  </ol>
+
+  <h3>"Who changed the signup-flow flag?"</h3>
+
+  <p>The agent will:</p>
+  <ol>
+    <li>Call <code>flick_get_audit_log</code> with <code>entity_type: "flag"</code> and the project ID</li>
+    <li>Filter results for the <code>signup-flow</code> flag and report the changes</li>
+  </ol>
+
+  <hr />
+
+  <h2>API Key Types</h2>
+
+  <table>
+    <thead>
+      <tr><th>Type</th><th>Can Read</th><th>Can Mutate</th><th>Use Case</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>SDK</strong></td><td><code>/evaluate/*</code> only</td><td>No</td><td>SDKs polling for flag configs</td></tr>
+      <tr><td><strong>Management</strong></td><td>Everything</td><td>Yes</td><td>Dashboard, MCP server, CI/CD</td></tr>
+    </tbody>
+  </table>
+
+  <p>The MCP server requires a <strong>Management</strong> key. SDK keys will get 403 errors on mutation endpoints.</p>
+</DocsLayout>

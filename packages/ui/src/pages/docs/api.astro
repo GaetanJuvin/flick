@@ -1,0 +1,342 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+---
+
+<DocsLayout title="API Reference" activeSection="api">
+  <h1>API Reference</h1>
+
+  <p>Base URL: <code>https://flick-server-production.up.railway.app/api/v1</code></p>
+
+  <h2>Authentication</h2>
+
+  <p>Two auth methods:</p>
+  <ul>
+    <li><strong>Session cookie</strong> &mdash; used by the dashboard UI. Set via <code>POST /auth/login</code>.</li>
+    <li><strong>API key</strong> &mdash; used by SDKs and MCP server. Pass as <code>Authorization: Bearer flk_...</code></li>
+  </ul>
+
+  <h2>Response Format</h2>
+
+  <p>All responses follow the same envelope:</p>
+
+  <pre><code>// Success (single)
+{"{"} "data": {"{"} ... {"}"} {"}"}
+
+// Success (list)
+{"{"} "data": [...], "cursor": "...", "has_more": true {"}"}
+
+// Error
+{"{"} "error": {"{"} "code": "NOT_FOUND", "message": "Flag not found" {"}"} {"}"}</code></pre>
+
+  <hr />
+
+  <h2>Auth</h2>
+
+  <table>
+    <thead>
+      <tr><th>Method</th><th>Path</th><th>Auth</th><th>Description</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>GET</code></td><td><code>/auth/config</code></td><td>None</td><td>Auth mode and SAML availability</td></tr>
+      <tr><td><code>POST</code></td><td><code>/auth/login</code></td><td>None</td><td>Email/password login, sets session cookie</td></tr>
+      <tr><td><code>POST</code></td><td><code>/auth/logout</code></td><td>None</td><td>Clear session cookie</td></tr>
+      <tr><td><code>GET</code></td><td><code>/auth/me</code></td><td>Session</td><td>Current user</td></tr>
+      <tr><td><code>GET</code></td><td><code>/auth/saml/login</code></td><td>None</td><td>Redirect to SAML IdP</td></tr>
+      <tr><td><code>POST</code></td><td><code>/auth/saml/callback</code></td><td>None</td><td>SAML assertion consumer service</td></tr>
+    </tbody>
+  </table>
+
+  <h3>POST /auth/login</h3>
+
+  <pre><code>{"{"} "email": "user@example.com", "password": "..." {"}"}</code></pre>
+
+  <p>Returns user object and sets <code>session</code> cookie (httpOnly, 7 days).</p>
+  <p>Rate limited: 5 attempts/min per IP, 10 attempts/5min per email.</p>
+
+  <hr />
+
+  <h2>Profile</h2>
+
+  <table>
+    <thead>
+      <tr><th>Method</th><th>Path</th><th>Auth</th><th>Description</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>GET</code></td><td><code>/profile</code></td><td>Session</td><td>Get own profile</td></tr>
+      <tr><td><code>PATCH</code></td><td><code>/profile</code></td><td>Session</td><td>Update name/email</td></tr>
+      <tr><td><code>POST</code></td><td><code>/profile/password</code></td><td>Session</td><td>Change password</td></tr>
+    </tbody>
+  </table>
+
+  <h3>POST /profile/password</h3>
+
+  <pre><code>{"{"} "current_password": "old", "new_password": "new" {"}"}</code></pre>
+
+  <p>Only works for password-auth users (not SAML).</p>
+
+  <hr />
+
+  <h2>Users (Admin)</h2>
+
+  <table>
+    <thead>
+      <tr><th>Method</th><th>Path</th><th>Auth</th><th>Description</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>GET</code></td><td><code>/users</code></td><td>Admin</td><td>List all users</td></tr>
+      <tr><td><code>POST</code></td><td><code>/users</code></td><td>Admin</td><td>Create user</td></tr>
+      <tr><td><code>GET</code></td><td><code>/users/:id</code></td><td>Session</td><td>Get user</td></tr>
+      <tr><td><code>PATCH</code></td><td><code>/users/:id</code></td><td>Admin</td><td>Update user</td></tr>
+      <tr><td><code>DELETE</code></td><td><code>/users/:id</code></td><td>Admin</td><td>Delete user</td></tr>
+      <tr><td><code>POST</code></td><td><code>/users/:id/reset-password</code></td><td>Admin</td><td>Reset user's password</td></tr>
+    </tbody>
+  </table>
+
+  <hr />
+
+  <h2>Projects</h2>
+
+  <table>
+    <thead>
+      <tr><th>Method</th><th>Path</th><th>Auth</th><th>Description</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>GET</code></td><td><code>/projects</code></td><td>Session</td><td>List all projects</td></tr>
+      <tr><td><code>POST</code></td><td><code>/projects</code></td><td>Admin</td><td>Create project</td></tr>
+      <tr><td><code>GET</code></td><td><code>/projects/:id</code></td><td>Session</td><td>Get project</td></tr>
+      <tr><td><code>PATCH</code></td><td><code>/projects/:id</code></td><td>Admin</td><td>Update project</td></tr>
+    </tbody>
+  </table>
+
+  <hr />
+
+  <h2>Environments</h2>
+
+  <table>
+    <thead>
+      <tr><th>Method</th><th>Path</th><th>Auth</th><th>Description</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>GET</code></td><td><code>/projects/:pid/environments</code></td><td>Session</td><td>List environments</td></tr>
+      <tr><td><code>POST</code></td><td><code>/projects/:pid/environments</code></td><td>Admin</td><td>Create environment</td></tr>
+      <tr><td><code>PATCH</code></td><td><code>/projects/:pid/environments/:id</code></td><td>Admin</td><td>Update environment</td></tr>
+      <tr><td><code>DELETE</code></td><td><code>/projects/:pid/environments/:id</code></td><td>Admin</td><td>Delete environment</td></tr>
+    </tbody>
+  </table>
+
+  <hr />
+
+  <h2>Flags</h2>
+
+  <table>
+    <thead>
+      <tr><th>Method</th><th>Path</th><th>Auth</th><th>Description</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>GET</code></td><td><code>/projects/:pid/flags</code></td><td>Session</td><td>List flags (query: <code>archived</code>, <code>tags</code>)</td></tr>
+      <tr><td><code>POST</code></td><td><code>/projects/:pid/flags</code></td><td>Admin</td><td>Create flag</td></tr>
+      <tr><td><code>GET</code></td><td><code>/projects/:pid/flags/:id</code></td><td>Session</td><td>Get flag</td></tr>
+      <tr><td><code>PATCH</code></td><td><code>/projects/:pid/flags/:id</code></td><td>Admin</td><td>Update flag metadata</td></tr>
+      <tr><td><code>DELETE</code></td><td><code>/projects/:pid/flags/:id</code></td><td>Admin</td><td>Delete flag</td></tr>
+      <tr><td><code>POST</code></td><td><code>/projects/:pid/flags/:id/archive</code></td><td>Admin</td><td>Archive flag</td></tr>
+      <tr><td><code>POST</code></td><td><code>/projects/:pid/flags/:id/restore</code></td><td>Admin</td><td>Restore archived flag</td></tr>
+    </tbody>
+  </table>
+
+  <h3>POST /projects/:pid/flags</h3>
+
+  <pre><code>{"{"}
+  "key": "new-checkout",
+  "name": "New Checkout",
+  "gate_type": "boolean",
+  "description": "Redesigned checkout flow"
+{"}"}</code></pre>
+
+  <p>Gate types: <code>boolean</code>, <code>percentage</code>, <code>group</code>.</p>
+
+  <hr />
+
+  <h2>Flag Environments</h2>
+
+  <table>
+    <thead>
+      <tr><th>Method</th><th>Path</th><th>Auth</th><th>Description</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>GET</code></td><td><code>/projects/:pid/flags/:fid/environments</code></td><td>Session</td><td>List env configs for a flag</td></tr>
+      <tr><td><code>GET</code></td><td><code>/projects/:pid/flags/:fid/environments/:eid</code></td><td>Session</td><td>Get one flag-env config</td></tr>
+      <tr><td><code>PATCH</code></td><td><code>/projects/:pid/flags/:fid/environments/:eid</code></td><td>Admin</td><td>Update gate config</td></tr>
+      <tr><td><code>POST</code></td><td><code>/projects/:pid/flags/:fid/environments/:eid/toggle</code></td><td>Admin</td><td>Toggle flag on/off</td></tr>
+    </tbody>
+  </table>
+
+  <h3>PATCH gate config example</h3>
+
+  <pre><code>{"{"}
+  "gate_type": "percentage",
+  "gate_config": {"{"} "percentage": 25, "sticky": true {"}"}
+{"}"}</code></pre>
+
+  <hr />
+
+  <h2>Groups</h2>
+
+  <table>
+    <thead>
+      <tr><th>Method</th><th>Path</th><th>Auth</th><th>Description</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>GET</code></td><td><code>/projects/:pid/groups</code></td><td>Session</td><td>List groups</td></tr>
+      <tr><td><code>POST</code></td><td><code>/projects/:pid/groups</code></td><td>Admin</td><td>Create group</td></tr>
+      <tr><td><code>GET</code></td><td><code>/projects/:pid/groups/:id</code></td><td>Session</td><td>Get group</td></tr>
+      <tr><td><code>PATCH</code></td><td><code>/projects/:pid/groups/:id</code></td><td>Admin</td><td>Update group</td></tr>
+      <tr><td><code>DELETE</code></td><td><code>/projects/:pid/groups/:id</code></td><td>Admin</td><td>Delete group</td></tr>
+      <tr><td><code>GET</code></td><td><code>/projects/:pid/flags/:fid/environments/:eid/groups</code></td><td>Session</td><td>Groups on a flag-env</td></tr>
+      <tr><td><code>POST</code></td><td><code>/projects/:pid/flags/:fid/environments/:eid/groups</code></td><td>Admin</td><td>Attach group</td></tr>
+      <tr><td><code>DELETE</code></td><td><code>/projects/:pid/flags/:fid/environments/:eid/groups/:gid</code></td><td>Admin</td><td>Detach group</td></tr>
+    </tbody>
+  </table>
+
+  <h3>POST group</h3>
+
+  <pre><code>{"{"}
+  "name": "Pro Users",
+  "slug": "pro-users",
+  "rules": [
+    {"{"} "attribute": "plan", "operator": "eq", "value": "pro" {"}"},
+    {"{"} "attribute": "country", "operator": "in", "value": ["US", "CA"] {"}"}
+  ]
+{"}"}</code></pre>
+
+  <p>Rules within a group are AND'd. Multiple groups on a flag are OR'd.</p>
+
+  <hr />
+
+  <h2>Evaluation (SDK)</h2>
+
+  <p>These endpoints use API key auth and are rate-limited (1000 req/10s per key).</p>
+
+  <table>
+    <thead>
+      <tr><th>Method</th><th>Path</th><th>Auth</th><th>Description</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>POST</code></td><td><code>/evaluate</code></td><td>API Key</td><td>Evaluate one flag</td></tr>
+      <tr><td><code>POST</code></td><td><code>/evaluate/batch</code></td><td>API Key</td><td>Evaluate all flags</td></tr>
+      <tr><td><code>GET</code></td><td><code>/evaluate/config</code></td><td>API Key</td><td>Full flag config (for SDK polling)</td></tr>
+    </tbody>
+  </table>
+
+  <h3>POST /evaluate</h3>
+
+  <pre><code>{"{"}
+  "flag_key": "new-checkout",
+  "context": {"{"}
+    "key": "user-123",
+    "attributes": {"{"} "plan": "pro" {"}"}
+  {"}"}
+{"}"}</code></pre>
+
+  <h3>GET /evaluate/config</h3>
+
+  <p>Returns the full config payload for SDK polling. Supports <code>ETag</code> / <code>If-None-Match</code> for efficient 304 responses.</p>
+
+  <pre><code>{"{"}
+  "data": {"{"}
+    "environment": "production",
+    "version": "abc123",
+    "flags": [
+      {"{"}
+        "key": "new-checkout",
+        "gate_type": "boolean",
+        "enabled": true,
+        "gate_config": {"{"}{"}"} ,
+        "groups": []
+      {"}"}
+    ]
+  {"}"}
+{"}"}</code></pre>
+
+  <hr />
+
+  <h2>Audit Log</h2>
+
+  <table>
+    <thead>
+      <tr><th>Method</th><th>Path</th><th>Auth</th><th>Description</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>GET</code></td><td><code>/projects/:pid/audit</code></td><td>Session</td><td>Query audit log</td></tr>
+    </tbody>
+  </table>
+
+  <p>Query params: <code>entity_type</code>, <code>entity_id</code>, <code>actor_id</code>, <code>action</code>, <code>cursor</code>, <code>limit</code>.</p>
+
+  <hr />
+
+  <h2>API Keys</h2>
+
+  <table>
+    <thead>
+      <tr><th>Method</th><th>Path</th><th>Auth</th><th>Description</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>GET</code></td><td><code>/projects/:pid/api-keys</code></td><td>Admin</td><td>List keys (secrets masked)</td></tr>
+      <tr><td><code>POST</code></td><td><code>/projects/:pid/api-keys</code></td><td>Admin</td><td>Create key (plaintext shown once)</td></tr>
+      <tr><td><code>DELETE</code></td><td><code>/projects/:pid/api-keys/:id</code></td><td>Admin</td><td>Revoke key</td></tr>
+    </tbody>
+  </table>
+
+  <p>Key types: <code>sdk</code> (read-only evaluate) or <code>management</code> (full access).</p>
+
+  <hr />
+
+  <h2>Webhooks</h2>
+
+  <table>
+    <thead>
+      <tr><th>Method</th><th>Path</th><th>Auth</th><th>Description</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>GET</code></td><td><code>/projects/:pid/webhooks</code></td><td>Session</td><td>List webhooks</td></tr>
+      <tr><td><code>POST</code></td><td><code>/projects/:pid/webhooks</code></td><td>Admin</td><td>Create webhook</td></tr>
+      <tr><td><code>PATCH</code></td><td><code>/projects/:pid/webhooks/:id</code></td><td>Admin</td><td>Update webhook</td></tr>
+      <tr><td><code>DELETE</code></td><td><code>/projects/:pid/webhooks/:id</code></td><td>Admin</td><td>Delete webhook</td></tr>
+      <tr><td><code>POST</code></td><td><code>/projects/:pid/webhooks/:id/test</code></td><td>Admin</td><td>Send test delivery</td></tr>
+      <tr><td><code>GET</code></td><td><code>/projects/:pid/webhooks/:id/deliveries</code></td><td>Session</td><td>Delivery history</td></tr>
+    </tbody>
+  </table>
+
+  <p>Webhook payloads are signed with HMAC-SHA256 via the <code>X-Flick-Signature</code> header.</p>
+
+  <hr />
+
+  <h2>Rate Limits</h2>
+
+  <table>
+    <thead>
+      <tr><th>Endpoint</th><th>Limit</th><th>Window</th><th>Key</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>POST /auth/login</code></td><td>5 requests</td><td>60s</td><td>Per IP</td></tr>
+      <tr><td><code>POST /auth/login</code></td><td>10 requests</td><td>5min</td><td>Per email</td></tr>
+      <tr><td><code>POST /evaluate</code></td><td>1000 requests</td><td>10s</td><td>Per API key</td></tr>
+      <tr><td><code>POST /evaluate/batch</code></td><td>1000 requests</td><td>10s</td><td>Per API key</td></tr>
+      <tr><td><code>GET /evaluate/config</code></td><td>1000 requests</td><td>10s</td><td>Per API key</td></tr>
+    </tbody>
+  </table>
+
+  <p>Rate limit headers on every response:</p>
+  <ul>
+    <li><code>X-RateLimit-Limit</code> &mdash; max requests in window</li>
+    <li><code>X-RateLimit-Remaining</code> &mdash; remaining requests</li>
+    <li><code>X-RateLimit-Reset</code> &mdash; Unix timestamp when window resets</li>
+    <li><code>Retry-After</code> &mdash; seconds until retry (only on 429)</li>
+  </ul>
+
+  <hr />
+
+  <h2>Health Check</h2>
+
+  <pre><code>GET /health → {"{"} "status": "ok" {"}"}</code></pre>
+</DocsLayout>

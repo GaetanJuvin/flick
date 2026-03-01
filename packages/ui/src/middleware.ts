@@ -1,6 +1,6 @@
 import { defineMiddleware } from 'astro:middleware';
 
-const PUBLIC_PATHS = ['/login', '/api/v1/auth/saml'];
+const PUBLIC_PATHS = ['/login', '/api/v1/auth/saml', '/docs'];
 
 export const onRequest = defineMiddleware(async (context, next) => {
   const { pathname } = context.url;

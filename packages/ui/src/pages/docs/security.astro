@@ -1,0 +1,124 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+---
+
+<DocsLayout title="Security" activeSection="security">
+  <h1>Security</h1>
+
+  <h2>API Keys</h2>
+
+  <ul>
+    <li>Raw key shown only once at creation</li>
+    <li>Stored as SHA-256 hash in database</li>
+    <li>Two types: SDK keys (evaluate only) and management keys (full API access)</li>
+    <li>Keys are scoped to a project</li>
+  </ul>
+
+  <table>
+    <thead>
+      <tr><th>Type</th><th>Can Read</th><th>Can Mutate</th><th>Use Case</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>SDK</strong></td>
+        <td><code>/evaluate/*</code> only</td>
+        <td>No</td>
+        <td>SDKs polling for flag configs</td>
+      </tr>
+      <tr>
+        <td><strong>Management</strong></td>
+        <td>Everything</td>
+        <td>Yes</td>
+        <td>Dashboard, MCP server, CI/CD</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Authentication</h2>
+
+  <ul>
+    <li>Session-based auth for UI (httpOnly cookie, 7-day expiry)</li>
+    <li>API key auth for SDKs and management API (<code>Authorization: Bearer flk_...</code>)</li>
+    <li>Passwords hashed with bcrypt (cost factor 12)</li>
+    <li>SAML SSO support for enterprise identity providers</li>
+  </ul>
+
+  <h3>Session Flow</h3>
+  <ol>
+    <li>User submits credentials via <code>POST /auth/login</code></li>
+    <li>Server validates against bcrypt hash</li>
+    <li>Session cookie set (httpOnly, secure, 7 days)</li>
+    <li>All subsequent requests authenticated via cookie</li>
+  </ol>
+
+  <h3>Rate Limiting</h3>
+  <table>
+    <thead>
+      <tr><th>Endpoint</th><th>Limit</th><th>Window</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>POST /auth/login</code></td><td>5 attempts</td><td>Per IP per minute</td></tr>
+      <tr><td><code>POST /auth/login</code></td><td>10 attempts</td><td>Per email per 5 minutes</td></tr>
+      <tr><td>SDK evaluation endpoints</td><td>1000 requests</td><td>Per API key per 10s</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Authorization (RBAC)</h2>
+
+  <table>
+    <thead>
+      <tr><th>Role</th><th>Permissions</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Admin</strong></td>
+        <td>Full access &mdash; create/update/delete flags, groups, environments, users, API keys, webhooks</td>
+      </tr>
+      <tr>
+        <td><strong>Viewer</strong></td>
+        <td>Read-only access &mdash; view flags, groups, environments, audit log</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>Per-project roles are managed via the <code>user_projects</code> join table.</p>
+
+  <h2>Webhook Security</h2>
+
+  <ul>
+    <li>HMAC-SHA256 signed payloads</li>
+    <li>Signature included in <code>X-Flick-Signature</code> header</li>
+    <li>Webhook secrets stored encrypted in the database</li>
+  </ul>
+
+  <h3>Verifying Webhook Signatures</h3>
+
+  <pre><code>import {"{ createHmac }"} from 'crypto';
+
+function verifyWebhook(payload: string, signature: string, secret: string): boolean {"{"}
+  const expected = createHmac('sha256', secret)
+    .update(payload)
+    .digest('hex');
+  return signature === expected;
+{"}"}</code></pre>
+
+  <h2>Data Protection</h2>
+
+  <ul>
+    <li>Audit log is append-only (no updates or deletes)</li>
+    <li>Before/after JSONB snapshots for every change</li>
+    <li>All API inputs validated with Zod schemas</li>
+    <li>SQL injection prevented via parameterized queries</li>
+  </ul>
+
+  <h2>Input Validation</h2>
+
+  <p>
+    Every API endpoint validates its input against Zod schemas defined in
+    <code>@flick/shared</code>. Invalid requests are rejected with a structured
+    error response before reaching any business logic.
+  </p>
+
+  <pre><code>// Example: flag creation schema
+{"{"} "error": {"{"} "code": "VALIDATION_ERROR", "message": "key must be lowercase kebab-case" {"}"} {"}"}</code></pre>
+</DocsLayout>

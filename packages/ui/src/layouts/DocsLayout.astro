@@ -1,0 +1,120 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+  activeSection: string;
+}
+
+const { title, activeSection } = Astro.props;
+
+const sections = [
+  { href: '/docs', label: 'Getting Started', id: 'getting-started' },
+  { href: '/docs/sdk', label: 'SDK Guide', id: 'sdk' },
+  { href: '/docs/api', label: 'API Reference', id: 'api' },
+  { href: '/docs/mcp', label: 'MCP Server', id: 'mcp' },
+  { href: '/docs/architecture', label: 'Architecture', id: 'architecture' },
+  { href: '/docs/security', label: 'Security', id: 'security' },
+];
+---
+
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title} — Flick Docs</title>
+  </head>
+  <body class="min-h-screen bg-background text-foreground">
+    <!-- Header -->
+    <header class="border-b border-border sticky top-0 z-50 bg-background/95 backdrop-blur">
+      <div class="mx-auto flex max-w-[1440px] items-center justify-between px-6 py-3">
+        <div class="flex items-center gap-4">
+          <a href="/docs" class="flex items-center gap-3 hover:opacity-80 transition-opacity">
+            <div class="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 text-primary">
+                <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+                <line x1="4" x2="4" y1="22" y2="15"></line>
+              </svg>
+            </div>
+            <div>
+              <h1 class="text-sm font-semibold text-foreground">Flick</h1>
+              <p class="text-xs text-muted-foreground">Documentation</p>
+            </div>
+          </a>
+        </div>
+
+        <a
+          href="/"
+          class="text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          Dashboard &rarr;
+        </a>
+      </div>
+    </header>
+
+    <div class="mx-auto max-w-[1440px] flex">
+      <!-- Sidebar (desktop) -->
+      <aside class="hidden md:block w-60 shrink-0 border-r border-border">
+        <nav class="sticky top-[57px] p-4 space-y-1">
+          {sections.map(({ href, label, id }) => (
+            <a
+              href={href}
+              class:list={[
+                'block px-3 py-2 rounded-md text-sm transition-colors',
+                activeSection === id
+                  ? 'bg-primary/10 text-primary font-medium'
+                  : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+              ]}
+            >
+              {label}
+            </a>
+          ))}
+        </nav>
+      </aside>
+
+      <!-- Mobile nav -->
+      <div class="md:hidden border-b border-border w-full">
+        <nav class="flex overflow-x-auto px-4 py-2 gap-1">
+          {sections.map(({ href, label, id }) => (
+            <a
+              href={href}
+              class:list={[
+                'shrink-0 px-3 py-1.5 rounded-md text-xs font-medium transition-colors',
+                activeSection === id
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+              ]}
+            >
+              {label}
+            </a>
+          ))}
+        </nav>
+      </div>
+
+      <!-- Main content -->
+      <main class="flex-1 min-w-0 px-8 py-8 md:px-12 md:py-10">
+        <article class="prose prose-invert max-w-none
+          prose-headings:text-foreground prose-headings:font-semibold
+          prose-h1:text-2xl prose-h1:border-b prose-h1:border-border prose-h1:pb-4 prose-h1:mb-6
+          prose-h2:text-xl prose-h2:mt-10 prose-h2:mb-4
+          prose-h3:text-base prose-h3:mt-8 prose-h3:mb-3
+          prose-p:text-muted-foreground prose-p:leading-relaxed
+          prose-a:text-primary prose-a:no-underline hover:prose-a:underline
+          prose-strong:text-foreground
+          prose-code:text-primary prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:font-mono prose-code:before:content-none prose-code:after:content-none
+          prose-pre:bg-muted prose-pre:border prose-pre:border-border prose-pre:rounded-lg
+          prose-pre:prose-code:bg-transparent prose-pre:prose-code:px-0 prose-pre:prose-code:py-0
+          prose-table:text-sm
+          prose-th:text-foreground prose-th:font-medium prose-th:border-border prose-th:px-3 prose-th:py-2
+          prose-td:text-muted-foreground prose-td:border-border prose-td:px-3 prose-td:py-2
+          prose-li:text-muted-foreground
+          prose-ol:text-muted-foreground
+          prose-ul:text-muted-foreground
+          prose-hr:border-border
+        ">
+          <slot />
+        </article>
+      </main>
+    </div>
+  </body>
+</html>

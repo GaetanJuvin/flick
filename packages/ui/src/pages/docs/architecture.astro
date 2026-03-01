@@ -1,0 +1,143 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+---
+
+<DocsLayout title="Architecture" activeSection="architecture">
+  <h1>Architecture</h1>
+
+  <h2>System Overview</h2>
+
+  <pre><code>┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│  Astro UI    │────▶│  Fastify API │◀────│  MCP Server  │
+│  (Dashboard) │     │  (Server)    │     │  (AI Agents) │
+└──────────────┘     └──────┬───────┘     └──────────────┘
+                            │
+                     ┌──────┴───────┐
+                     │              │
+                ┌────▼────┐  ┌─────▼─────┐
+                │ Postgres│  │   Redis   │
+                │ (Data)  │  │  (Cache)  │
+                └─────────┘  └───────────┘
+                            ▲
+              ┌─────────────┼─────────────┐
+              │             │             │
+        ┌─────▼─────┐ ┌────▼──────┐ ┌────▼──────┐
+        │ TS SDK    │ │ Kotlin SDK│ │ Other SDKs│
+        │ (polling) │ │ (polling) │ │  (future) │
+        └───────────┘ └───────────┘ └───────────┘</code></pre>
+
+  <h2>Tech Stack</h2>
+
+  <ul>
+    <li><strong>Server:</strong> Node.js + Fastify</li>
+    <li><strong>UI:</strong> Astro SSR + React islands + Tailwind CSS</li>
+    <li><strong>Database:</strong> PostgreSQL (data) + Redis (cache)</li>
+    <li><strong>Build:</strong> pnpm + Turborepo</li>
+    <li><strong>SDKs:</strong> TypeScript (polling), Kotlin (coroutines)</li>
+  </ul>
+
+  <h2>Gate Types (v1)</h2>
+
+  <table>
+    <thead>
+      <tr><th>Gate</th><th>Evaluation</th><th>Config</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Boolean</strong></td>
+        <td>Simple on/off</td>
+        <td><code>{"{}"}</code></td>
+      </tr>
+      <tr>
+        <td><strong>Percentage</strong></td>
+        <td><code>murmurhash3(flagKey + contextKey) % 100 &lt; percentage</code></td>
+        <td><code>{"{ percentage, sticky }"}</code></td>
+      </tr>
+      <tr>
+        <td><strong>Group</strong></td>
+        <td>Context attributes matched against group rules</td>
+        <td><code>{"{}"}</code> (groups linked via <code>flag_groups</code>)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>System Layers</h2>
+
+  <pre><code>┌─────────────────────────────────────────┐
+│            UI Layer (Astro)              │
+│  Pages, React islands, components        │
+├─────────────────────────────────────────┤
+│          Routes Layer (Fastify)          │
+│  HTTP handlers, request/response         │
+├─────────────────────────────────────────┤
+│         Service Layer                    │
+│  Business logic, orchestration           │
+├─────────────────────────────────────────┤
+│        Repository Layer                  │
+│  Data access (PostgreSQL queries)        │
+├─────────────────────────────────────────┤
+│          Cache Layer (Redis)             │
+│  Write-through cache, TTL, invalidation  │
+├─────────────────────────────────────────┤
+│          Types Layer (@flick/shared)     │
+│  Shared types, Zod schemas               │
+└─────────────────────────────────────────┘</code></pre>
+
+  <p><strong>Dependency rule:</strong> Dependencies flow downward only.</p>
+
+  <h2>Domain Module Pattern</h2>
+
+  <p>Each server domain in <code>packages/server/src/domains/</code> follows:</p>
+
+  <pre><code>domains/[name]/
+├── types.ts     # Domain-specific types and enums
+├── repo.ts      # PostgreSQL queries (data access)
+├── service.ts   # Business logic (calls repo, triggers events)
+└── routes.ts    # Fastify route handlers (calls service)</code></pre>
+
+  <h2>Core Data Model</h2>
+
+  <ul>
+    <li><code>flag_environments</code> is the <strong>core join</strong> &mdash; flags have no state without an environment</li>
+    <li><code>gate_config</code> is JSONB for extensibility</li>
+    <li>Group rules are JSONB arrays &mdash; rules within a group are ANDed, groups on a flag are ORed</li>
+    <li>API keys store SHA-256 hash only; raw key shown once at creation</li>
+    <li>Audit log stores before/after JSONB snapshots</li>
+  </ul>
+
+  <h2>API Response Envelope</h2>
+
+  <pre><code>// Success
+{"{"} data: T {"}"}
+
+// List
+{"{"} data: T[], cursor: string | null, has_more: boolean {"}"}
+
+// Error
+{"{"} error: {"{"} code: string, message: string {"}"} {"}"}</code></pre>
+
+  <h2>Caching Strategy</h2>
+
+  <table>
+    <thead>
+      <tr><th>Cache Key</th><th>TTL</th><th>Invalidation</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>flick:env:{"{envId}"}:flags</code></td><td>60s</td><td>On any flag/group change in that env</td></tr>
+      <tr><td><code>flick:env:{"{envId}"}:flag:{"{key}"}</code></td><td>60s</td><td>On specific flag change</td></tr>
+      <tr><td><code>flick:apikey:{"{hash}"}</code></td><td>300s</td><td>On key revocation</td></tr>
+    </tbody>
+  </table>
+
+  <p>Write-through: miss &rarr; fetch from Postgres &rarr; write to Redis &rarr; return.</p>
+
+  <h2>SDK Architecture</h2>
+
+  <p>Both SDKs follow the same pattern:</p>
+  <ol>
+    <li>Poll <code>GET /evaluate/config</code> with ETag for 304 support</li>
+    <li>Cache full flag config in memory</li>
+    <li>Evaluate locally (zero-latency) using shared evaluation logic</li>
+    <li>Exponential backoff on failures, serve from cache during outages</li>
+  </ol>
+</DocsLayout>

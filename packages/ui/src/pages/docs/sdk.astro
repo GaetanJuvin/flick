@@ -1,0 +1,212 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+---
+
+<DocsLayout title="SDK Guide" activeSection="sdk">
+  <h1>SDK Guide</h1>
+
+  <p>
+    Flick SDKs are available for TypeScript and Kotlin. Both work the same way: poll the
+    server for flag configs, cache in-memory, evaluate locally.
+  </p>
+
+  <h2>How It Works</h2>
+
+  <ol>
+    <li>SDK connects to Flick and fetches all flag configs for your environment</li>
+    <li>Configs are cached in memory &mdash; <code>isEnabled()</code> reads from cache, zero network calls</li>
+    <li>SDK polls every 30s for updates using ETags (304 = no change, zero payload)</li>
+    <li>If Flick goes down, the SDK keeps serving the last known config</li>
+    <li>If Flick is down on cold start, <code>defaultValues</code> kick in</li>
+  </ol>
+
+  <p>Your app never blocks on Flick.</p>
+
+  <hr />
+
+  <h2>TypeScript SDK</h2>
+
+  <h3>Install</h3>
+
+  <pre><code>npm install @flick/sdk</code></pre>
+
+  <h3>Basic Usage</h3>
+
+  <pre><code>import {"{ FlickClient }"} from '@flick/sdk';
+
+const flick = new FlickClient({"{"}
+  baseUrl: 'https://flick-server-production.up.railway.app/api/v1',
+  sdkKey: 'flk_your_sdk_key_here',
+  defaultValues: {"{"}
+    'new-checkout': false,
+    'dark-mode': true,
+  {"}"},
+{"}"});
+
+// Wait for initial config fetch (optional but recommended)
+await flick.waitForReady();
+
+// Check a flag
+if (flick.isEnabled('new-checkout')) {"{"}
+  renderNewCheckout();
+{"}"} else {"{"}
+  renderOldCheckout();
+{"}"}</code></pre>
+
+  <h3>With User Context</h3>
+
+  <p>Pass a context to enable percentage rollouts and group targeting:</p>
+
+  <pre><code>const enabled = flick.isEnabled('premium-feature', {"{"}
+  key: user.id,            // used for percentage sticky hashing
+  attributes: {"{"}
+    plan: 'pro',
+    country: 'US',
+    teams: ['engineering', 'design'],
+  {"}"},
+{"}"});</code></pre>
+
+  <h3>Configuration</h3>
+
+  <pre><code>const flick = new FlickClient({"{"}
+  // Required
+  baseUrl: 'https://your-flick-server.com/api/v1',
+  sdkKey: 'flk_...',
+
+  // Optional
+  pollingIntervalMs: 30_000,                // default: 30s
+  defaultValues: {"{"} 'my-flag': false {"}"},       // fallback when flag not in cache
+  onFlagsUpdated: () =&gt; {"{"}                    // called when flags change
+    console.log('Flags updated');
+  {"}"},
+  onError: (err) =&gt; {"{"}                        // called on poll failure
+    console.error('Flick poll error:', err);
+  {"}"},
+{"}"});</code></pre>
+
+  <h3>Lifecycle</h3>
+
+  <pre><code>// Wait for the SDK to be ready (resolves after first successful poll,
+// or immediately if poll fails and cache is empty — returns defaults)
+await flick.waitForReady();
+
+// Get all flags as a snapshot
+const allFlags = flick.getAllFlags();
+// → {"{"} 'new-checkout': true, 'dark-mode': false, ... {"}"}
+
+// Shut down when your app exits
+flick.close();</code></pre>
+
+  <h3>Resilience</h3>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Scenario</th>
+        <th>Behavior</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Flick healthy</td>
+        <td>Flags evaluated from cache, updated every 30s</td>
+      </tr>
+      <tr>
+        <td>Flick goes down mid-session</td>
+        <td>Cache keeps serving last known config, exponential backoff on polling (up to 60s)</td>
+      </tr>
+      <tr>
+        <td>Flick down on cold start</td>
+        <td><code>waitForReady()</code> resolves immediately, <code>isEnabled()</code> returns <code>defaultValues</code></td>
+      </tr>
+      <tr>
+        <td>No <code>defaultValues</code> provided</td>
+        <td>Unknown flags return <code>false</code> (safe &mdash; features off by default)</td>
+      </tr>
+      <tr>
+        <td>Flag not found in cache</td>
+        <td>Falls back to <code>defaultValues[key]</code>, then <code>false</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <hr />
+
+  <h2>Kotlin SDK</h2>
+
+  <h3>Gradle</h3>
+
+  <pre><code>// Add as a local module dependency
+implementation(project(":flick-sdk"))</code></pre>
+
+  <h3>Basic Usage</h3>
+
+  <pre><code>import com.flick.sdk.FlickClient
+import com.flick.sdk.FlickConfig
+import com.flick.sdk.FlickContext
+
+val flick = FlickClient.create(
+    FlickConfig(
+        serverUrl = "https://flick-server-production.up.railway.app/api/v1",
+        apiKey = "flk_your_sdk_key_here",
+        pollingIntervalSeconds = 30,
+        defaultValues = mapOf("new-checkout" to false),
+    )
+)
+
+// Block until first config is fetched (10s timeout)
+flick.awaitReady(timeoutSeconds = 10)
+
+// Check a flag
+if (flick.isEnabled("new-checkout")) {"{"}
+    renderNewCheckout()
+{"}"}</code></pre>
+
+  <h3>With Context</h3>
+
+  <pre><code>val enabled = flick.isEnabled(
+    "premium-feature",
+    FlickContext(
+        key = user.id,
+        attributes = mapOf(
+            "plan" to "pro",
+            "country" to "US",
+        ),
+    )
+)</code></pre>
+
+  <h3>Group Registration</h3>
+
+  <p>Register custom group matchers for dynamic targeting:</p>
+
+  <pre><code>flick.registerGroup("beta-testers") {"{"} context -&gt;
+    context.key in betaTesterIds
+{"}"}</code></pre>
+
+  <h3>Callbacks</h3>
+
+  <pre><code>flick.onFlagsUpdated {"{"}
+    println("Flags changed!")
+{"}"}</code></pre>
+
+  <h3>Shutdown</h3>
+
+  <pre><code>flick.shutdown()  // stops polling, closes HTTP client, cancels coroutines</code></pre>
+
+  <hr />
+
+  <h2>Getting an SDK Key</h2>
+
+  <ol>
+    <li>Log in to the Flick dashboard</li>
+    <li>Go to <strong>Settings &gt; API Keys</strong></li>
+    <li>Create a new key with type <strong>SDK</strong></li>
+    <li>Bind it to an environment (or pass <code>X-Environment-Id</code> header)</li>
+    <li>Copy the key &mdash; it's shown only once</li>
+  </ol>
+
+  <p>
+    SDK keys can only read flag configs via <code>/evaluate/config</code>. They cannot
+    create, update, or delete anything.
+  </p>
+</DocsLayout>

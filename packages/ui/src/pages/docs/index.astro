@@ -1,0 +1,126 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+---
+
+<DocsLayout title="Getting Started" activeSection="getting-started">
+  <h1>Getting Started</h1>
+
+  <p>
+    Flick is an internal feature flag platform. It gives your team boolean toggles,
+    percentage rollouts, and group-based targeting &mdash; with SDKs that evaluate locally
+    and never block your app.
+  </p>
+
+  <h2>Architecture</h2>
+
+  <pre><code>┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│  Astro UI    │────▶│  Fastify API │◀────│  MCP Server  │
+│  (Dashboard) │     │  (Server)    │     │  (AI Agents) │
+└──────────────┘     └──────┬───────┘     └──────────────┘
+                            │
+                     ┌──────┴───────┐
+                     │              │
+                ┌────▼────┐  ┌─────▼─────┐
+                │ Postgres│  │   Redis   │
+                │ (Data)  │  │  (Cache)  │
+                └─────────┘  └───────────┘
+                            ▲
+              ┌─────────────┼─────────────┐
+              │             │             │
+        ┌─────▼─────┐ ┌────▼──────┐ ┌────▼──────┐
+        │ TS SDK    │ │ Kotlin SDK│ │ Other SDKs│
+        │ (polling) │ │ (polling) │ │  (future) │
+        └───────────┘ └───────────┘ └───────────┘</code></pre>
+
+  <h2>Key Concepts</h2>
+
+  <h3>Gate Types</h3>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Gate</th>
+        <th>Evaluation</th>
+        <th>Config</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Boolean</strong></td>
+        <td>Simple on/off</td>
+        <td><code>{"{}"}</code></td>
+      </tr>
+      <tr>
+        <td><strong>Percentage</strong></td>
+        <td><code>murmurhash3(flagKey + contextKey) % 100 &lt; percentage</code></td>
+        <td><code>{"{ percentage, sticky }"}</code></td>
+      </tr>
+      <tr>
+        <td><strong>Group</strong></td>
+        <td>Context attributes matched against group rules</td>
+        <td><code>{"{}"}</code> (groups linked via <code>flag_groups</code>)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Environments</h3>
+  <p>
+    Flags have per-environment configuration. A flag might be enabled in <code>dev</code>,
+    disabled in <code>staging</code>, and rolled out to 25% in <code>production</code>.
+    The <code>flag_environments</code> table is the core join &mdash; flags have no state
+    without an environment.
+  </p>
+
+  <h3>Groups</h3>
+  <p>
+    Groups are named sets of targeting rules. Rules within a group are AND'd.
+    Multiple groups attached to a flag are OR'd. This lets you build complex targeting
+    like "Pro users in the US OR beta testers".
+  </p>
+
+  <h2>Quick Start</h2>
+
+  <h3>1. Create a flag</h3>
+  <p>
+    Open the <a href="/">dashboard</a>, click <strong>New Flag</strong>, give it a key
+    like <code>new-checkout</code>, and choose a gate type.
+  </p>
+
+  <h3>2. Enable it in an environment</h3>
+  <p>
+    On the flag detail page, toggle it on for your target environment.
+  </p>
+
+  <h3>3. Add the SDK</h3>
+  <pre><code>npm install @flick/sdk</code></pre>
+
+  <pre><code>import {"{ FlickClient }"} from '@flick/sdk';
+
+const flick = new FlickClient({"{"}
+  baseUrl: 'https://flick-server-production.up.railway.app/api/v1',
+  sdkKey: 'flk_your_sdk_key_here',
+  defaultValues: {"{"} 'new-checkout': false {"}"},
+{"}"});
+
+await flick.waitForReady();
+
+if (flick.isEnabled('new-checkout')) {"{"}
+  renderNewCheckout();
+{"}"}</code></pre>
+
+  <h3>4. Get an SDK key</h3>
+  <p>
+    Go to <strong>Settings &gt; API Keys</strong> in the dashboard, create an <strong>SDK</strong> key,
+    and bind it to your environment. The key is shown only once.
+  </p>
+
+  <h2>Documentation</h2>
+
+  <ul>
+    <li><a href="/docs/sdk">SDK Guide</a> &mdash; TypeScript and Kotlin SDK setup, usage, and resilience</li>
+    <li><a href="/docs/api">API Reference</a> &mdash; All REST endpoints with examples</li>
+    <li><a href="/docs/mcp">MCP Server</a> &mdash; AI agent integration for flag management</li>
+    <li><a href="/docs/architecture">Architecture</a> &mdash; System design, layers, and caching</li>
+    <li><a href="/docs/security">Security</a> &mdash; Auth, RBAC, API keys, and audit logging</li>
+  </ul>
+</DocsLayout>
