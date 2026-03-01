@@ -1,0 +1,20 @@
+---
+interface Props {
+  name: string;
+  active: boolean;
+}
+
+const { name, active } = Astro.props;
+
+const shortName: Record<string, string> = {
+  development: 'DEV',
+  staging: 'STG',
+  production: 'PROD',
+};
+
+const label = shortName[name.toLowerCase()] ?? name.toUpperCase().substring(0, 4);
+---
+
+<span class:list={['env-pill', active ? 'env-pill-active' : 'env-pill-inactive']}>
+  {label}
+</span>

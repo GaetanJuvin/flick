@@ -1,0 +1,94 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+const user = Astro.locals.user;
+const currentPath = Astro.url.pathname;
+
+const nav = [
+  { href: '/', label: 'Flags' },
+  { href: '/groups', label: 'Groups' },
+  { href: '/environments', label: 'Environments' },
+  { href: '/audit', label: 'Audit Log' },
+  { href: '/settings/webhooks', label: 'Settings' },
+];
+---
+
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title} — Flick</title>
+  </head>
+  <body class="min-h-screen bg-background text-foreground">
+    <!-- Header -->
+    <header class="border-b border-border">
+      <div class="mx-auto flex max-w-[1440px] items-center justify-between px-6 py-3">
+        <div class="flex items-center gap-6">
+          <a href="/" class="flex items-center gap-3 hover:opacity-80 transition-opacity">
+            <div class="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 text-primary">
+                <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+                <line x1="4" x2="4" y1="22" y2="15"></line>
+              </svg>
+            </div>
+            <div>
+              <h1 class="text-sm font-semibold text-foreground">Feature Flags</h1>
+              <p class="text-xs text-muted-foreground">Internal Platform</p>
+            </div>
+          </a>
+
+          <!-- Nav -->
+          <nav class="flex items-center gap-1">
+            {nav.map(({ href, label }) => (
+              <a
+                href={href}
+                class:list={[
+                  'px-3 py-1.5 rounded-md text-xs font-medium transition-colors',
+                  currentPath === href || (href !== '/' && currentPath.startsWith(href))
+                    ? 'bg-accent text-foreground'
+                    : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+                ]}
+              >
+                {label}
+              </a>
+            ))}
+          </nav>
+        </div>
+
+        <div class="flex items-center gap-4">
+          <div class="flex items-center gap-2 text-xs text-muted-foreground font-mono">
+            <span class="h-2 w-2 rounded-full bg-status-active animate-pulse-dot"></span>
+            All systems operational
+          </div>
+          <div class="h-4 w-px bg-border"></div>
+          <div class="flex items-center gap-2 text-xs text-muted-foreground">
+            <a href="/profile" class="hover:text-foreground transition-colors">{user?.name}</a>
+            <form action="/login" method="get">
+              <button
+                type="submit"
+                class="text-muted-foreground/60 hover:text-foreground transition-colors"
+                onclick="document.cookie='session=;path=/;max-age=0'; return true;"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                  <polyline points="16 17 21 12 16 7"></polyline>
+                  <line x1="21" x2="9" y1="12" y2="12"></line>
+                </svg>
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main -->
+    <main class="mx-auto max-w-[1440px] px-6 py-6">
+      <slot />
+    </main>
+  </body>
+</html>

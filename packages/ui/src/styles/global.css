@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 17 19 23;
+    --foreground: 231 235 239;
+    --card: 26 29 35;
+    --card-foreground: 231 235 239;
+    --border: 45 50 58;
+    --muted: 35 39 46;
+    --muted-foreground: 120 130 145;
+    --primary: 74 222 128;
+    --primary-foreground: 17 19 23;
+    --secondary: 35 39 46;
+    --secondary-foreground: 160 170 180;
+    --accent: 30 34 40;
+    --accent-foreground: 231 235 239;
+    --status-active: 74 222 128;
+    --status-warning: 251 191 36;
+    --status-inactive: 100 110 125;
+  }
+
+  * {
+    border-color: rgb(var(--border));
+  }
+
+  body {
+    background-color: rgb(var(--background));
+    color: rgb(var(--foreground));
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgb(var(--border));
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgb(var(--muted-foreground) / 0.4);
+  }
+}
+
+@layer components {
+  .stat-card {
+    @apply rounded-lg border border-border bg-card p-4;
+  }
+  .stat-label {
+    @apply text-xs font-medium uppercase tracking-wider text-muted-foreground;
+  }
+  .stat-value {
+    @apply font-mono text-2xl font-bold text-foreground;
+  }
+
+  .status-badge {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium;
+  }
+  .status-badge-active {
+    @apply bg-status-active/10 text-status-active;
+  }
+  .status-badge-warning {
+    @apply bg-status-warning/10 text-status-warning;
+  }
+  .status-badge-inactive {
+    @apply bg-muted text-status-inactive;
+  }
+
+  .env-pill {
+    @apply inline-flex items-center rounded px-1.5 py-0.5 font-mono text-[10px] font-semibold tracking-wider;
+  }
+  .env-pill-active {
+    @apply bg-primary/10 text-primary;
+  }
+  .env-pill-inactive {
+    @apply bg-muted text-muted-foreground/40;
+  }
+
+  .tag-pill {
+    @apply inline-flex items-center rounded-full bg-secondary text-secondary-foreground text-[10px] px-1.5 py-0 h-4 font-normal;
+  }
+}

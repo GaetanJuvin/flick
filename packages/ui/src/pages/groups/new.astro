@@ -1,0 +1,21 @@
+---
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import GroupEditor from '../../components/islands/GroupEditor';
+import { api } from '../../lib/api';
+
+const cookie = Astro.request.headers.get('cookie') ?? '';
+let projectId = '';
+
+try {
+  const projectsRes = await api<{ data: any[] }>('/projects', { cookie });
+  if (projectsRes.data.length > 0) {
+    projectId = projectsRes.data[0].id;
+  }
+} catch {}
+---
+
+<DashboardLayout title="Create Group">
+  <a href="/groups" class="text-xs text-muted-foreground hover:text-foreground transition-colors mb-6 inline-block">&larr; Back to groups</a>
+  <h2 class="text-lg font-semibold text-foreground mb-6">Create Group</h2>
+  {projectId && <GroupEditor client:load projectId={projectId} />}
+</DashboardLayout>

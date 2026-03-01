@@ -1,0 +1,20 @@
+---
+interface Props {
+  status: 'active' | 'rolling-out' | 'inactive';
+}
+
+const { status } = Astro.props;
+
+const config = {
+  active: { label: 'Active', class: 'status-badge-active', dot: 'bg-status-active' },
+  'rolling-out': { label: 'Rolling Out', class: 'status-badge-warning', dot: 'bg-status-warning animate-pulse-dot' },
+  inactive: { label: 'Inactive', class: 'status-badge-inactive', dot: 'bg-status-inactive' },
+};
+
+const c = config[status];
+---
+
+<span class:list={['status-badge', c.class]}>
+  <span class:list={['h-1.5 w-1.5 rounded-full', c.dot]}></span>
+  {c.label}
+</span>

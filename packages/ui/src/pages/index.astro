@@ -1,0 +1,221 @@
+---
+import DashboardLayout from '../layouts/DashboardLayout.astro';
+import StatusBadge from '../components/common/StatusBadge.astro';
+import EnvironmentBadge from '../components/common/EnvironmentBadge.astro';
+import EmptyState from '../components/common/EmptyState.astro';
+import FlagFilter from '../components/islands/FlagFilter';
+import FlagCreateModal from '../components/islands/FlagCreateModal';
+import FlagDetailPanel from '../components/islands/FlagDetailPanel';
+import { api } from '../lib/api';
+
+const cookie = Astro.request.headers.get('cookie') ?? '';
+let flags: any[] = [];
+let environments: any[] = [];
+let projectId = '';
+
+try {
+  const projectsRes = await api<{ data: any[] }>('/projects', { cookie });
+  const projects = projectsRes.data;
+  if (projects.length > 0) {
+    projectId = projects[0].id;
+    const [flagsRes, envsRes] = await Promise.all([
+      api<{ data: any[] }>(`/projects/${projectId}/flags`, { cookie }),
+      api<{ data: any[] }>(`/projects/${projectId}/environments`, { cookie }),
+    ]);
+    flags = flagsRes.data;
+    environments = envsRes.data;
+
+    // Fetch environment config for each flag
+    for (const flag of flags) {
+      try {
+        const envConfigs = await Promise.all(
+          environments.map(async (env: any) => {
+            try {
+              const res = await api<{ data: any }>(
+                `/projects/${projectId}/flags/${flag.id}/environments/${env.id}`,
+                { cookie },
+              );
+              return { ...res.data, environment_slug: env.slug };
+            } catch {
+              return { environment_id: env.id, environment_slug: env.slug, enabled: false, gate_config: {} };
+            }
+          }),
+        );
+        flag.environments = envConfigs;
+      } catch {
+        flag.environments = [];
+      }
+    }
+  }
+} catch {
+  // API unavailable
+}
+
+const search = Astro.url.searchParams.get('search') ?? '';
+const status = Astro.url.searchParams.get('status') ?? '';
+
+let filteredFlags = [...flags];
+
+if (search) {
+  filteredFlags = filteredFlags.filter((f: any) =>
+    f.name.toLowerCase().includes(search.toLowerCase()) ||
+    f.key.toLowerCase().includes(search.toLowerCase()) ||
+    f.tags?.some((t: string) => t.toLowerCase().includes(search.toLowerCase()))
+  );
+}
+
+if (status === 'active') {
+  filteredFlags = filteredFlags.filter((f: any) => f.environments?.some((e: any) => e.enabled));
+} else if (status === 'inactive') {
+  filteredFlags = filteredFlags.filter((f: any) => !f.environments?.some((e: any) => e.enabled));
+} else if (status === 'rolling-out') {
+  filteredFlags = filteredFlags.filter((f: any) =>
+    f.gate_type === 'percentage' && f.environments?.some((e: any) => e.enabled && e.gate_config?.percentage > 0 && e.gate_config?.percentage < 100)
+  );
+}
+
+// Compute stats
+const totalFlags = flags.length;
+const activeFlags = flags.filter((f: any) => f.environments?.some((e: any) => e.enabled)).length;
+const activeRate = totalFlags > 0 ? Math.round((activeFlags / totalFlags) * 100) : 0;
+const rollingOut = flags.filter((f: any) =>
+  f.gate_type === 'percentage' && f.environments?.some((e: any) => e.enabled && e.gate_config?.percentage > 0 && e.gate_config?.percentage < 100)
+).length;
+
+function getStatusForFlag(flag: any): 'active' | 'rolling-out' | 'inactive' {
+  if (flag.archived) return 'inactive';
+  const hasEnabled = flag.environments?.some((e: any) => e.enabled);
+  if (!hasEnabled) return 'inactive';
+  if (flag.gate_type === 'percentage') {
+    const pctEnv = flag.environments?.find((e: any) => e.enabled && e.gate_config?.percentage > 0 && e.gate_config?.percentage < 100);
+    if (pctEnv) return 'rolling-out';
+  }
+  return 'active';
+}
+
+function getRolloutPct(flag: any): string {
+  if (flag.gate_type === 'percentage') {
+    const env = flag.environments?.find((e: any) => e.enabled);
+    if (env) return (env.gate_config?.percentage ?? 0) + '%';
+    return '0%';
+  }
+  return flag.environments?.some((e: any) => e.enabled) ? '100%' : '0%';
+}
+---
+
+<DashboardLayout title="Flags">
+  <!-- Stats Cards -->
+  <div class="grid grid-cols-4 gap-4 mb-6">
+    <div class="stat-card">
+      <p class="stat-label">Total Flags</p>
+      <div class="mt-2">
+        <span class="stat-value">{totalFlags}</span>
+      </div>
+      <p class="mt-1 text-xs text-muted-foreground">{activeFlags} active, {totalFlags - activeFlags} other</p>
+    </div>
+    <div class="stat-card">
+      <p class="stat-label">Active Rate</p>
+      <div class="mt-2 flex items-baseline gap-2">
+        <span class="stat-value">{activeRate}%</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <p class="stat-label">Rolling Out</p>
+      <div class="mt-2">
+        <span class="stat-value">{rollingOut}</span>
+      </div>
+      <p class="mt-1 text-xs text-muted-foreground">Flags in progressive rollout</p>
+    </div>
+    <div class="stat-card">
+      <p class="stat-label">Environments</p>
+      <div class="mt-2">
+        <span class="stat-value">{environments.length}</span>
+      </div>
+      <p class="mt-1 text-xs text-muted-foreground">{environments.map((e: any) => e.name).join(', ')}</p>
+    </div>
+  </div>
+
+  <!-- Filters + Actions -->
+  <div class="flex items-center justify-between mb-4">
+    <FlagFilter client:load initialSearch={search} initialStatus={status} />
+    {projectId && <FlagCreateModal client:idle projectId={projectId} />}
+  </div>
+
+  {filteredFlags.length === 0 ? (
+    <EmptyState
+      title="No flags found"
+      description="Create your first feature flag to get started."
+    />
+  ) : (
+    <div class="flex gap-6">
+      <!-- Table -->
+      <div class="flex-1 min-w-0">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-border text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <th class="px-4 py-3 text-left">Flag</th>
+              <th class="px-4 py-3 text-left">Status</th>
+              <th class="px-4 py-3 text-center">Environments</th>
+              <th class="px-4 py-3 text-right">Rollout</th>
+              <th class="px-4 py-3 text-right">Type</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredFlags.map((flag: any) => (
+              <tr
+                class="border-b border-border/50 cursor-pointer transition-colors hover:bg-accent/50 flag-row"
+                data-flag-key={flag.key}
+                onclick={`window.dispatchEvent(new CustomEvent('flag-select', { detail: { key: '${flag.key}' } }))`}
+              >
+                <td class="px-4 py-3">
+                  <div>
+                    <span class="font-mono text-xs text-foreground">{flag.key}</span>
+                    {flag.description && (
+                      <p class="text-xs text-muted-foreground mt-0.5">{flag.description}</p>
+                    )}
+                  </div>
+                  {flag.tags?.length > 0 && (
+                    <div class="flex gap-1 mt-1.5">
+                      {flag.tags.map((tag: string) => (
+                        <span class="tag-pill">{tag}</span>
+                      ))}
+                    </div>
+                  )}
+                </td>
+                <td class="px-4 py-3">
+                  <StatusBadge status={getStatusForFlag(flag)} />
+                </td>
+                <td class="px-4 py-3">
+                  <div class="flex items-center justify-center gap-1">
+                    {environments.map((env: any) => {
+                      const flagEnv = flag.environments?.find((fe: any) => fe.environment_id === env.id || fe.environment_slug === env.slug);
+                      return (
+                        <EnvironmentBadge name={env.slug} active={flagEnv?.enabled ?? false} />
+                      );
+                    })}
+                  </div>
+                </td>
+                <td class="px-4 py-3 text-right">
+                  <span class="font-mono text-xs text-foreground">{getRolloutPct(flag)}</span>
+                </td>
+                <td class="px-4 py-3 text-right">
+                  <span class="font-mono text-xs text-muted-foreground capitalize">{flag.gate_type}</span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Detail Panel -->
+      <div class="w-80 shrink-0">
+        <FlagDetailPanel
+          client:load
+          flags={filteredFlags}
+          environments={environments}
+          projectId={projectId}
+        />
+      </div>
+    </div>
+  )}
+</DashboardLayout>

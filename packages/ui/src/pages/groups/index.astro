@@ -1,0 +1,76 @@
+---
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import EmptyState from '../../components/common/EmptyState.astro';
+import { api } from '../../lib/api';
+
+const cookie = Astro.request.headers.get('cookie') ?? '';
+let groups: any[] = [];
+let projectId = '';
+
+try {
+  const projectsRes = await api<{ data: any[] }>('/projects', { cookie });
+  if (projectsRes.data.length > 0) {
+    projectId = projectsRes.data[0].id;
+    const groupsRes = await api<{ data: any[] }>(`/projects/${projectId}/groups`, { cookie });
+    groups = groupsRes.data;
+  }
+} catch {
+  // API unavailable
+}
+---
+
+<DashboardLayout title="Groups">
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h2 class="text-lg font-semibold text-foreground">Groups</h2>
+      <p class="text-xs text-muted-foreground mt-1">{groups.length} group{groups.length !== 1 ? 's' : ''} configured</p>
+    </div>
+    {projectId && (
+      <a
+        href="/groups/new"
+        class="px-3 py-1.5 bg-primary text-primary-foreground text-xs font-medium rounded-md hover:opacity-90 transition-opacity"
+      >
+        + New Group
+      </a>
+    )}
+  </div>
+
+  {groups.length === 0 ? (
+    <EmptyState
+      title="No groups yet"
+      description="Groups let you target specific sets of users with feature flags."
+    />
+  ) : (
+    <div class="rounded-lg border border-border bg-card">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-border text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            <th class="px-4 py-3 text-left">Group</th>
+            <th class="px-4 py-3 text-left">Slug</th>
+            <th class="px-4 py-3 text-right">Rules</th>
+          </tr>
+        </thead>
+        <tbody>
+          {groups.map((group: any) => (
+            <tr class="border-b border-border/50 hover:bg-accent/50 transition-colors">
+              <td class="px-4 py-3">
+                <a href={`/groups/${group.id}`} class="block">
+                  <span class="text-sm font-medium text-foreground">{group.name}</span>
+                  {group.description && (
+                    <p class="text-xs text-muted-foreground mt-0.5">{group.description}</p>
+                  )}
+                </a>
+              </td>
+              <td class="px-4 py-3">
+                <code class="font-mono text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">{group.slug}</code>
+              </td>
+              <td class="px-4 py-3 text-right">
+                <span class="font-mono text-xs text-foreground">{group.rules?.length ?? 0}</span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )}
+</DashboardLayout>

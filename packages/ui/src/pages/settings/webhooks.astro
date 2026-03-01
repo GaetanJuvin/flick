@@ -1,0 +1,86 @@
+---
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import EmptyState from '../../components/common/EmptyState.astro';
+import { api } from '../../lib/api';
+
+const cookie = Astro.request.headers.get('cookie') ?? '';
+let webhooks: any[] = [];
+
+try {
+  const projectsRes = await api<{ data: any[] }>('/projects', { cookie });
+  if (projectsRes.data.length > 0) {
+    const projectId = projectsRes.data[0].id;
+    const webhooksRes = await api<{ data: any[] }>(`/projects/${projectId}/webhooks`, { cookie });
+    webhooks = webhooksRes.data;
+  }
+} catch {}
+
+const currentTab = 'webhooks';
+---
+
+<DashboardLayout title="Webhooks">
+  <div class="mb-6">
+    <h2 class="text-lg font-semibold text-foreground">Settings</h2>
+  </div>
+
+  <!-- Settings Tabs -->
+  <div class="border-b border-border mb-6">
+    <nav class="flex gap-0">
+      <a href="/settings/api-keys" class={`px-4 py-2 text-xs font-medium border-b-2 transition-colors ${currentTab === 'api-keys' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'}`}>
+        API Keys
+      </a>
+      <a href="/settings/webhooks" class={`px-4 py-2 text-xs font-medium border-b-2 transition-colors ${currentTab === 'webhooks' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'}`}>
+        Webhooks
+      </a>
+      <a href="/settings/users" class={`px-4 py-2 text-xs font-medium border-b-2 transition-colors ${currentTab === 'users' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'}`}>
+        Users
+      </a>
+    </nav>
+  </div>
+
+  {webhooks.length === 0 ? (
+    <EmptyState title="No webhooks" description="Webhooks notify external services when flags change." />
+  ) : (
+    <div class="rounded-lg border border-border bg-card">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-border text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            <th class="px-4 py-3 text-left">URL</th>
+            <th class="px-4 py-3 text-left">Events</th>
+            <th class="px-4 py-3 text-right">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {webhooks.map((wh: any) => (
+            <tr class="border-b border-border/50 hover:bg-accent/50 transition-colors">
+              <td class="px-4 py-3">
+                <code class="font-mono text-xs text-foreground">{wh.url}</code>
+              </td>
+              <td class="px-4 py-3">
+                <div class="flex gap-1">
+                  {wh.events?.map((e: string) => (
+                    <span class="tag-pill">{e}</span>
+                  ))}
+                </div>
+              </td>
+              <td class="px-4 py-3 text-right">
+                <span class:list={[
+                  'inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium',
+                  wh.status === 'active'
+                    ? 'bg-status-active/10 text-status-active'
+                    : 'bg-muted text-muted-foreground',
+                ]}>
+                  <span class:list={[
+                    'h-1.5 w-1.5 rounded-full',
+                    wh.status === 'active' ? 'bg-status-active' : 'bg-status-inactive',
+                  ]}></span>
+                  {wh.status}
+                </span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )}
+</DashboardLayout>

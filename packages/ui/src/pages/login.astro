@@ -1,0 +1,143 @@
+---
+import '../styles/global.css';
+import { api } from '../lib/api';
+
+let authConfig = { mode: 'password', saml_enabled: false, saml_login_url: null } as {
+  mode: string;
+  saml_enabled: boolean;
+  saml_login_url: string | null;
+};
+
+try {
+  const res = await api<{ data: typeof authConfig }>('/auth/config');
+  authConfig = res.data;
+} catch {
+  // Default to password mode if config fetch fails
+}
+
+let loginError = '';
+
+if (Astro.request.method === 'POST') {
+  const formData = await Astro.request.formData();
+  const email = formData.get('email') as string;
+  const password = formData.get('password') as string;
+
+  try {
+    const API_BASE = import.meta.env.PUBLIC_API_URL ?? 'http://localhost:3456/api/v1';
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (res.ok) {
+      const body = await res.json();
+      const sessionData = Buffer.from(JSON.stringify(body.data)).toString('base64');
+      Astro.cookies.set('session', sessionData, {
+        httpOnly: true,
+        secure: import.meta.env.PROD,
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 7,
+      });
+      return Astro.redirect('/');
+    } else {
+      const body = await res.json().catch(() => ({}));
+      loginError = body?.error?.message ?? 'Invalid email or password';
+    }
+  } catch {
+    loginError = 'Unable to connect to the server';
+  }
+}
+
+const showPasswordForm = authConfig.mode === 'password' || authConfig.mode === 'both';
+const showSamlButton = authConfig.saml_enabled;
+const API_BASE = import.meta.env.PUBLIC_API_URL ?? 'http://localhost:3456/api/v1';
+---
+
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login — Flick</title>
+  </head>
+  <body class="bg-background text-foreground min-h-screen flex items-center justify-center">
+    <div class="w-full max-w-sm">
+      <div class="text-center mb-8">
+        <div class="flex items-center justify-center gap-3 mb-3">
+          <div class="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 text-primary">
+              <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+              <line x1="4" x2="4" y1="22" y2="15"></line>
+            </svg>
+          </div>
+        </div>
+        <h1 class="text-xl font-semibold text-foreground">Feature Flags</h1>
+        <p class="text-xs text-muted-foreground mt-1">Internal Platform</p>
+      </div>
+
+      <div class="rounded-lg border border-border bg-card p-6 space-y-4">
+        {loginError && (
+          <div class="rounded-md bg-red-500/10 border border-red-500/20 px-3 py-2">
+            <p class="text-xs text-red-400">{loginError}</p>
+          </div>
+        )}
+
+        {showSamlButton && (
+          <a
+            href={`${API_BASE}/auth/saml/login`}
+            class="flex items-center justify-center gap-2 w-full px-4 py-2 bg-muted text-foreground text-sm font-medium rounded-md hover:bg-accent transition-colors border border-border"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            Sign in with SSO
+          </a>
+        )}
+
+        {showSamlButton && showPasswordForm && (
+          <div class="relative">
+            <div class="absolute inset-0 flex items-center">
+              <div class="w-full border-t border-border"></div>
+            </div>
+            <div class="relative flex justify-center text-xs">
+              <span class="bg-card px-2 text-muted-foreground">or</span>
+            </div>
+          </div>
+        )}
+
+        {showPasswordForm && (
+          <form method="POST" class="space-y-4">
+            <div>
+              <label class="block text-xs font-medium text-muted-foreground mb-1" for="email">Email</label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                class="w-full px-3 py-2 rounded-md border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-muted-foreground mb-1" for="password">Password</label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                required
+                class="w-full px-3 py-2 rounded-md border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+            </div>
+            <button
+              type="submit"
+              class="w-full px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-md hover:opacity-90 transition-opacity"
+            >
+              Sign in
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,49 @@
+---
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import GroupEditor from '../../components/islands/GroupEditor';
+import { api } from '../../lib/api';
+
+const { id } = Astro.params;
+const cookie = Astro.request.headers.get('cookie') ?? '';
+
+let group: any = null;
+let projectId = '';
+
+try {
+  const projectsRes = await api<{ data: any[] }>('/projects', { cookie });
+  if (projectsRes.data.length > 0) {
+    projectId = projectsRes.data[0].id;
+    const groupRes = await api<{ data: any }>(`/projects/${projectId}/groups/${id}`, { cookie });
+    group = groupRes.data;
+  }
+} catch {}
+
+if (!group) {
+  return Astro.redirect('/groups');
+}
+
+const rules = (group.rules ?? []).map((r: any) => ({
+  attribute: r.attribute,
+  operator: r.operator,
+  value: Array.isArray(r.value) ? r.value.join(', ') : String(r.value),
+}));
+---
+
+<DashboardLayout title={group.name}>
+  <a href="/groups" class="text-xs text-muted-foreground hover:text-foreground transition-colors mb-6 inline-block">&larr; Back to groups</a>
+
+  <div class="mb-6">
+    <h2 class="text-lg font-semibold text-foreground">{group.name}</h2>
+    <code class="font-mono text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">{group.slug}</code>
+  </div>
+
+  <GroupEditor
+    client:load
+    projectId={projectId}
+    groupId={group.id}
+    initialName={group.name}
+    initialSlug={group.slug}
+    initialDescription={group.description}
+    initialRules={rules}
+  />
+</DashboardLayout>

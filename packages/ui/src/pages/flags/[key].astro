@@ -1,0 +1,123 @@
+---
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import EnvironmentBadge from '../../components/common/EnvironmentBadge.astro';
+import FlagToggle from '../../components/islands/FlagToggle';
+import PercentageSlider from '../../components/islands/PercentageSlider';
+import EnvironmentTabs from '../../components/islands/EnvironmentTabs';
+import { api } from '../../lib/api';
+
+const { key } = Astro.params;
+const cookie = Astro.request.headers.get('cookie') ?? '';
+
+let flag: any = null;
+let environments: any[] = [];
+let flagEnvs: any[] = [];
+let projectId = '';
+
+try {
+  const projectsRes = await api<{ data: any[] }>('/projects', { cookie });
+  if (projectsRes.data.length > 0) {
+    projectId = projectsRes.data[0].id;
+    const flagsRes = await api<{ data: any[] }>(`/projects/${projectId}/flags`, { cookie });
+    flag = flagsRes.data.find((f: any) => f.key === key);
+
+    if (flag) {
+      const envsRes = await api<{ data: any[] }>(`/projects/${projectId}/environments`, { cookie });
+      environments = envsRes.data;
+      const feRes = await api<{ data: any[] }>(`/projects/${projectId}/flags/${flag.id}/environments`, { cookie });
+      flagEnvs = feRes.data;
+    }
+  }
+} catch {}
+
+if (!flag) {
+  return Astro.redirect('/');
+}
+
+const selectedEnvId = Astro.url.searchParams.get('env') ?? environments[0]?.id;
+const selectedFe = flagEnvs.find((fe: any) => fe.environment_id === selectedEnvId);
+const selectedEnv = environments.find((e: any) => e.id === selectedEnvId);
+---
+
+<DashboardLayout title={flag.name}>
+  <a href="/" class="text-xs text-muted-foreground hover:text-foreground transition-colors mb-6 inline-block">&larr; Back to flags</a>
+
+  <div class="mb-6">
+    <div class="flex items-center gap-3 mb-1">
+      <h2 class="text-lg font-semibold text-foreground">{flag.name}</h2>
+      {flag.archived && (
+        <span class="text-[10px] font-medium uppercase tracking-wider bg-status-warning/10 text-status-warning px-2 py-0.5 rounded-full">Archived</span>
+      )}
+    </div>
+    <div class="flex items-center gap-3">
+      <code class="font-mono text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">{flag.key}</code>
+      <span class="text-xs text-muted-foreground capitalize">{flag.gate_type}</span>
+    </div>
+    {flag.description && <p class="text-xs text-muted-foreground mt-2">{flag.description}</p>}
+  </div>
+
+  <!-- Environment Tabs -->
+  <EnvironmentTabs client:load environments={environments} initialEnvId={selectedEnvId} />
+
+  <!-- Per-environment config -->
+  {selectedFe && selectedEnv && (
+    <div class="rounded-lg border border-border bg-card mt-4 p-6">
+      <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center gap-3">
+          <EnvironmentBadge name={selectedEnv.slug} active={selectedFe.enabled} />
+          <span class:list={[
+            'status-badge',
+            selectedFe.enabled ? 'status-badge-active' : 'status-badge-inactive',
+          ]}>
+            <span class:list={[
+              'h-1.5 w-1.5 rounded-full',
+              selectedFe.enabled ? 'bg-status-active' : 'bg-status-inactive',
+            ]}></span>
+            {selectedFe.enabled ? 'Enabled' : 'Disabled'}
+          </span>
+        </div>
+        <FlagToggle
+          client:visible
+          flagId={flag.id}
+          envId={selectedEnvId}
+          projectId={projectId}
+          enabled={selectedFe.enabled}
+        />
+      </div>
+
+      {flag.gate_type === 'percentage' && (
+        <div class="mt-4">
+          <h3 class="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-3">Rollout Percentage</h3>
+          <PercentageSlider
+            client:load
+            flagId={flag.id}
+            envId={selectedEnvId}
+            projectId={projectId}
+            initialPercentage={selectedFe.gate_config?.percentage ?? 0}
+            sticky={selectedFe.gate_config?.sticky ?? true}
+          />
+        </div>
+      )}
+
+      {flag.gate_type === 'group' && (
+        <div class="mt-4">
+          <h3 class="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-3">Groups</h3>
+          <p class="text-xs text-muted-foreground">
+            Manage groups on the <a href="/groups" class="text-primary hover:underline">Groups page</a>.
+          </p>
+        </div>
+      )}
+    </div>
+  )}
+
+  {flag.tags?.length > 0 && (
+    <div class="mt-6">
+      <h3 class="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2">Tags</h3>
+      <div class="flex gap-1">
+        {flag.tags.map((tag: string) => (
+          <span class="tag-pill">{tag}</span>
+        ))}
+      </div>
+    </div>
+  )}
+</DashboardLayout>

@@ -1,0 +1,90 @@
+---
+import DashboardLayout from '../layouts/DashboardLayout.astro';
+import ProfileForm from '../components/islands/ProfileForm';
+import PasswordChangeForm from '../components/islands/PasswordChangeForm';
+import { api } from '../lib/api';
+
+const cookie = Astro.request.headers.get('cookie') ?? '';
+let profile: any = null;
+
+try {
+  const res = await api<{ data: any }>('/profile', { cookie });
+  profile = res.data;
+} catch {
+  return Astro.redirect('/login');
+}
+
+const initials = profile.name
+  .split(' ')
+  .map((w: string) => w[0])
+  .slice(0, 2)
+  .join('')
+  .toUpperCase();
+
+const memberSince = new Date(profile.created_at).toLocaleDateString('en-US', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+});
+---
+
+<DashboardLayout title="Profile">
+  <div class="max-w-2xl">
+    <div class="mb-6">
+      <h2 class="text-lg font-semibold text-foreground">Profile</h2>
+      <p class="text-xs text-muted-foreground mt-1">Manage your account settings</p>
+    </div>
+
+    <!-- Profile header -->
+    <div class="rounded-lg border border-border bg-card p-6 mb-6">
+      <div class="flex items-center gap-4">
+        <div class="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary text-lg font-semibold">
+          {initials}
+        </div>
+        <div>
+          <h3 class="text-sm font-semibold text-foreground">{profile.name}</h3>
+          <p class="text-xs text-muted-foreground">{profile.email}</p>
+          <div class="flex items-center gap-2 mt-1.5">
+            <span class:list={[
+              'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium',
+              profile.role === 'admin'
+                ? 'bg-primary/10 text-primary'
+                : 'bg-muted text-muted-foreground',
+            ]}>
+              {profile.role}
+            </span>
+            <span class:list={[
+              'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium',
+              profile.auth_method === 'saml'
+                ? 'bg-blue-500/10 text-blue-400'
+                : 'bg-muted text-muted-foreground',
+            ]}>
+              {profile.auth_method === 'saml' ? 'SSO' : 'Password'}
+            </span>
+            <span class="text-[10px] text-muted-foreground/60">
+              Member since {memberSince}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit profile -->
+    <div class="rounded-lg border border-border bg-card p-6 mb-6">
+      <h3 class="text-sm font-semibold text-foreground mb-4">Edit Profile</h3>
+      <ProfileForm
+        client:load
+        currentName={profile.name}
+        currentEmail={profile.email}
+      />
+    </div>
+
+    <!-- Change password (only for password users) -->
+    {profile.auth_method === 'password' && (
+      <div class="rounded-lg border border-border bg-card p-6">
+        <h3 class="text-sm font-semibold text-foreground mb-4">Change Password</h3>
+        <PasswordChangeForm client:load />
+      </div>
+    )}
+  </div>
+</DashboardLayout>

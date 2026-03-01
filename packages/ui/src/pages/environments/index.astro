@@ -1,0 +1,59 @@
+---
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import EnvironmentBadge from '../../components/common/EnvironmentBadge.astro';
+import EmptyState from '../../components/common/EmptyState.astro';
+import { api } from '../../lib/api';
+
+const cookie = Astro.request.headers.get('cookie') ?? '';
+let environments: any[] = [];
+
+try {
+  const projectsRes = await api<{ data: any[] }>('/projects', { cookie });
+  if (projectsRes.data.length > 0) {
+    const projectId = projectsRes.data[0].id;
+    const envsRes = await api<{ data: any[] }>(`/projects/${projectId}/environments`, { cookie });
+    environments = envsRes.data;
+  }
+} catch {}
+---
+
+<DashboardLayout title="Environments">
+  <div class="mb-6">
+    <h2 class="text-lg font-semibold text-foreground">Environments</h2>
+    <p class="text-xs text-muted-foreground mt-1">{environments.length} environment{environments.length !== 1 ? 's' : ''} configured</p>
+  </div>
+
+  {environments.length === 0 ? (
+    <EmptyState title="No environments" description="Create a project to get started with default environments." />
+  ) : (
+    <div class="rounded-lg border border-border bg-card">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-border text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            <th class="px-4 py-3 text-left">Environment</th>
+            <th class="px-4 py-3 text-left">Slug</th>
+            <th class="px-4 py-3 text-right">Order</th>
+          </tr>
+        </thead>
+        <tbody>
+          {environments.map((env: any) => (
+            <tr class="border-b border-border/50 hover:bg-accent/50 transition-colors">
+              <td class="px-4 py-3">
+                <div class="flex items-center gap-3">
+                  <EnvironmentBadge name={env.slug} active={true} />
+                  <span class="text-sm font-medium text-foreground">{env.name}</span>
+                </div>
+              </td>
+              <td class="px-4 py-3">
+                <code class="font-mono text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">{env.slug}</code>
+              </td>
+              <td class="px-4 py-3 text-right">
+                <span class="font-mono text-xs text-foreground">{env.sort_order}</span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )}
+</DashboardLayout>
