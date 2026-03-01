@@ -1,0 +1,22 @@
+node_modules/
+dist/
+.env
+*.log
+.turbo/
+.astro/
+.pnpm-store/
+.claude/
+
+# Kotlin
+packages/sdk-kotlin/build/
+packages/sdk-kotlin/.gradle/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
