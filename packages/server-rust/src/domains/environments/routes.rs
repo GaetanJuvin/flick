@@ -92,11 +92,11 @@ async fn delete_environment(
 pub fn router() -> Router<AppState> {
     Router::new()
         .route(
-            "/projects/:projectId/environments",
+            "/projects/{projectId}/environments",
             get(list_environments).post(create_environment),
         )
         .route(
-            "/projects/:projectId/environments/:id",
+            "/projects/{projectId}/environments/{id}",
             patch(update_environment).delete(delete_environment),
         )
 }

@@ -72,15 +72,15 @@ async fn toggle_flag_environment(
 pub fn router() -> Router<AppState> {
     Router::new()
         .route(
-            "/projects/:projectId/flags/:flagId/environments",
+            "/projects/{projectId}/flags/{flagId}/environments",
             get(list_flag_environments),
         )
         .route(
-            "/projects/:projectId/flags/:flagId/environments/:envId",
+            "/projects/{projectId}/flags/{flagId}/environments/{envId}",
             get(get_flag_environment).patch(update_flag_environment),
         )
         .route(
-            "/projects/:projectId/flags/:flagId/environments/:envId/toggle",
+            "/projects/{projectId}/flags/{flagId}/environments/{envId}/toggle",
             post(toggle_flag_environment),
         )
 }

@@ -66,5 +66,5 @@ async fn update_project(
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/projects", get(list_projects).post(create_project))
-        .route("/projects/:id", get(get_project).patch(update_project))
+        .route("/projects/{id}", get(get_project).patch(update_project))
 }

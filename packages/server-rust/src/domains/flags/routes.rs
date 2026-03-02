@@ -137,19 +137,19 @@ async fn restore_flag(
 pub fn router() -> Router<AppState> {
     Router::new()
         .route(
-            "/projects/:projectId/flags",
+            "/projects/{projectId}/flags",
             get(list_flags).post(create_flag),
         )
         .route(
-            "/projects/:projectId/flags/:id",
+            "/projects/{projectId}/flags/{id}",
             get(get_flag).patch(update_flag).delete(delete_flag),
         )
         .route(
-            "/projects/:projectId/flags/:id/archive",
+            "/projects/{projectId}/flags/{id}/archive",
             post(archive_flag),
         )
         .route(
-            "/projects/:projectId/flags/:id/restore",
+            "/projects/{projectId}/flags/{id}/restore",
             post(restore_flag),
         )
 }

@@ -20,7 +20,7 @@ struct CreateApiKeyBody {
     environment_id: Option<Uuid>,
 }
 
-// GET /projects/:projectId/api-keys
+// GET /projects/{projectId}/api-keys
 async fn list_api_keys(
     State(state): State<AppState>,
     user: AuthUser,
@@ -31,7 +31,7 @@ async fn list_api_keys(
     Ok(Json(json!({ "data": keys })))
 }
 
-// POST /projects/:projectId/api-keys
+// POST /projects/{projectId}/api-keys
 async fn create_api_key(
     State(state): State<AppState>,
     user: AuthUser,
@@ -51,7 +51,7 @@ async fn create_api_key(
     Ok(Json(json!({ "data": created })))
 }
 
-// DELETE /projects/:projectId/api-keys/:id
+// DELETE /projects/{projectId}/api-keys/{id}
 async fn revoke_api_key(
     State(state): State<AppState>,
     user: AuthUser,
@@ -65,11 +65,11 @@ async fn revoke_api_key(
 pub fn router() -> Router<AppState> {
     Router::new()
         .route(
-            "/projects/:projectId/api-keys",
+            "/projects/{projectId}/api-keys",
             get(list_api_keys).post(create_api_key),
         )
         .route(
-            "/projects/:projectId/api-keys/:id",
+            "/projects/{projectId}/api-keys/{id}",
             delete(revoke_api_key),
         )
 }

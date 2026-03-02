@@ -21,7 +21,7 @@ struct AuditQueryParams {
     limit: Option<i64>,
 }
 
-// GET /projects/:projectId/audit
+// GET /projects/{projectId}/audit
 async fn get_audit_log(
     State(state): State<AppState>,
     user: AuthUser,
@@ -57,5 +57,5 @@ async fn get_audit_log(
 }
 
 pub fn router() -> Router<AppState> {
-    Router::new().route("/projects/:projectId/audit", get(get_audit_log))
+    Router::new().route("/projects/{projectId}/audit", get(get_audit_log))
 }

@@ -36,7 +36,7 @@ struct AddGroupBody {
     group_id: String,
 }
 
-// GET /projects/:projectId/groups
+// GET /projects/{projectId}/groups
 async fn list_groups(
     State(state): State<AppState>,
     user: AuthUser,
@@ -47,7 +47,7 @@ async fn list_groups(
     Ok(Json(json!({ "data": groups })))
 }
 
-// POST /projects/:projectId/groups
+// POST /projects/{projectId}/groups
 async fn create_group(
     State(state): State<AppState>,
     user: AuthUser,
@@ -63,7 +63,7 @@ async fn create_group(
     Ok(Json(json!({ "data": group })))
 }
 
-// GET /projects/:projectId/groups/:id
+// GET /projects/{projectId}/groups/{id}
 async fn get_group(
     State(state): State<AppState>,
     user: AuthUser,
@@ -74,7 +74,7 @@ async fn get_group(
     Ok(Json(json!({ "data": group })))
 }
 
-// PATCH /projects/:projectId/groups/:id
+// PATCH /projects/{projectId}/groups/{id}
 async fn update_group(
     State(state): State<AppState>,
     user: AuthUser,
@@ -93,7 +93,7 @@ async fn update_group(
     Ok(Json(json!({ "data": group })))
 }
 
-// DELETE /projects/:projectId/groups/:id
+// DELETE /projects/{projectId}/groups/{id}
 async fn delete_group(
     State(state): State<AppState>,
     user: AuthUser,
@@ -104,7 +104,7 @@ async fn delete_group(
     Ok(Json(json!({ "data": { "deleted": true } })))
 }
 
-// GET /projects/:projectId/flags/:flagId/environments/:envId/groups
+// GET /projects/{projectId}/flags/{flagId}/environments/{envId}/groups
 async fn get_flag_groups(
     State(state): State<AppState>,
     user: AuthUser,
@@ -115,7 +115,7 @@ async fn get_flag_groups(
     Ok(Json(json!({ "data": groups })))
 }
 
-// POST /projects/:projectId/flags/:flagId/environments/:envId/groups
+// POST /projects/{projectId}/flags/{flagId}/environments/{envId}/groups
 async fn add_group_to_flag(
     State(state): State<AppState>,
     user: AuthUser,
@@ -132,7 +132,7 @@ async fn add_group_to_flag(
     Ok(Json(json!({ "data": flag_group })))
 }
 
-// DELETE /projects/:projectId/flags/:flagId/environments/:envId/groups/:groupId
+// DELETE /projects/{projectId}/flags/{flagId}/environments/{envId}/groups/{groupId}
 async fn remove_group_from_flag(
     State(state): State<AppState>,
     user: AuthUser,
@@ -146,18 +146,18 @@ async fn remove_group_from_flag(
 pub fn router() -> Router<AppState> {
     Router::new()
         // Group CRUD
-        .route("/projects/:projectId/groups", get(list_groups).post(create_group))
+        .route("/projects/{projectId}/groups", get(list_groups).post(create_group))
         .route(
-            "/projects/:projectId/groups/:id",
+            "/projects/{projectId}/groups/{id}",
             get(get_group).patch(update_group).delete(delete_group),
         )
         // Flag-group associations
         .route(
-            "/projects/:projectId/flags/:flagId/environments/:envId/groups",
+            "/projects/{projectId}/flags/{flagId}/environments/{envId}/groups",
             get(get_flag_groups).post(add_group_to_flag),
         )
         .route(
-            "/projects/:projectId/flags/:flagId/environments/:envId/groups/:groupId",
+            "/projects/{projectId}/flags/{flagId}/environments/{envId}/groups/{groupId}",
             delete(remove_group_from_flag),
         )
 }
