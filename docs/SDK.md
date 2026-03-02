@@ -1,6 +1,6 @@
 # SDK Guide
 
-Flick SDKs are available for TypeScript and Kotlin. Both work the same way: poll the server for flag configs, cache in-memory, evaluate locally.
+Flick SDKs are available for TypeScript, Kotlin, and Ruby. All work the same way: poll the server for flag configs, cache in-memory, evaluate locally.
 
 ## How It Works
 
@@ -179,6 +179,90 @@ flick.onFlagsUpdated {
 ```kotlin
 flick.shutdown()  // stops polling, closes HTTP client, cancels coroutines
 ```
+
+---
+
+## Ruby SDK
+
+### Install
+
+```ruby
+# Gemfile
+gem "flick-ruby", path: "packages/sdk-ruby"
+```
+
+### Basic Usage
+
+```ruby
+require "flick"
+
+Flick.configure do |config|
+  config.base_url = "https://flick-server-production.up.railway.app/api/v1"
+  config.sdk_key  = ENV["FLICK_SDK_KEY"]
+  config.default_values = { "new-checkout" => false, "dark-mode" => true }
+end
+
+# Wait for initial config fetch (optional but recommended)
+Flick.wait_for_ready(timeout: 10)
+
+# Check a flag — symbols auto-convert underscores to hyphens
+if Flick.enabled?(:new_checkout)
+  render_new_checkout
+else
+  render_old_checkout
+end
+```
+
+### With User Context (Actor Protocol)
+
+Implement `flick_id` (required) and `flick_attributes` (optional) on your actor:
+
+```ruby
+class User
+  def flick_id = id.to_s
+  def flick_attributes = { "plan" => plan, "country" => country }
+end
+
+enabled = Flick.enabled?(:premium_feature, current_user)
+```
+
+### Configuration
+
+```ruby
+Flick.configure do |config|
+  # Required
+  config.base_url = "https://your-flick-server.com/api/v1"
+  config.sdk_key  = "flk_..."
+
+  # Optional
+  config.polling_interval = 30                      # default: 30s
+  config.default_values = { "my-flag" => false }    # fallback when flag not in cache
+  config.on_flags_updated = -> { puts "Flags updated" }
+  config.on_error = ->(e) { Rails.logger.error("Flick: #{e}") }
+end
+```
+
+### Lifecycle
+
+```ruby
+# Wait for the SDK to be ready (blocks until first poll or timeout)
+Flick.wait_for_ready(timeout: 10)
+
+# Get all flags as a snapshot
+all_flags = Flick.all_flags
+# => { "new-checkout" => true, "dark-mode" => false, ... }
+
+# Shut down when your app exits
+Flick.close
+```
+
+### Key Differences from Other SDKs
+
+- **Flipper-style API**: `Flick.enabled?(:flag, actor)` instead of `client.isEnabled("flag")`
+- **Symbol keys**: `:new_checkout` auto-converts to `"new-checkout"`
+- **Actor protocol**: `flick_id` + `flick_attributes` instead of a context hash
+- **Zero dependencies**: stdlib only (`net/http`, `json`, `uri`)
+- **Ruby >= 3.0**
 
 ---
 

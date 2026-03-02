@@ -6,7 +6,7 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
   <h1>SDK Guide</h1>
 
   <p>
-    Flick SDKs are available for TypeScript and Kotlin. Both work the same way: poll the
+    Flick SDKs are available for TypeScript, Kotlin, and Ruby. All work the same way: poll the
     server for flag configs, cache in-memory, evaluate locally.
   </p>
 
@@ -192,6 +192,82 @@ if (flick.isEnabled("new-checkout")) {"{"}
   <h3>Shutdown</h3>
 
   <pre><code>flick.shutdown()  // stops polling, closes HTTP client, cancels coroutines</code></pre>
+
+  <hr />
+
+  <h2>Ruby SDK</h2>
+
+  <h3>Install</h3>
+
+  <pre><code># Gemfile
+gem "flick-ruby", path: "packages/sdk-ruby"</code></pre>
+
+  <h3>Basic Usage</h3>
+
+  <pre><code>require "flick"
+
+Flick.configure do |config|
+  config.base_url = "https://flick-server-production.up.railway.app/api/v1"
+  config.sdk_key  = ENV["FLICK_SDK_KEY"]
+  config.default_values = {"{"} "new-checkout" =&gt; false, "dark-mode" =&gt; true {"}"}
+end
+
+# Wait for initial config fetch (optional but recommended)
+Flick.wait_for_ready(timeout: 10)
+
+# Check a flag — symbols auto-convert underscores to hyphens
+if Flick.enabled?(:new_checkout)
+  render_new_checkout
+else
+  render_old_checkout
+end</code></pre>
+
+  <h3>With User Context (Actor Protocol)</h3>
+
+  <p>Implement <code>flick_id</code> (required) and <code>flick_attributes</code> (optional) on your actor:</p>
+
+  <pre><code>class User
+  def flick_id = id.to_s
+  def flick_attributes = {"{"} "plan" =&gt; plan, "country" =&gt; country {"}"}
+end
+
+enabled = Flick.enabled?(:premium_feature, current_user)</code></pre>
+
+  <h3>Configuration</h3>
+
+  <pre><code>Flick.configure do |config|
+  # Required
+  config.base_url = "https://your-flick-server.com/api/v1"
+  config.sdk_key  = "flk_..."
+
+  # Optional
+  config.polling_interval = 30                      # default: 30s
+  config.default_values = {"{"} "my-flag" =&gt; false {"}"}    # fallback when flag not in cache
+  config.on_flags_updated = -&gt; {"{"} puts "Flags updated" {"}"}
+  config.on_error = -&gt;(e) {"{"} Rails.logger.error("Flick: #{"{"}e{"}"}") {"}"}
+end</code></pre>
+
+  <h3>Lifecycle</h3>
+
+  <pre><code># Wait for the SDK to be ready (blocks until first poll or timeout)
+Flick.wait_for_ready(timeout: 10)
+
+# Get all flags as a snapshot
+all_flags = Flick.all_flags
+# =&gt; {"{"} "new-checkout" =&gt; true, "dark-mode" =&gt; false, ... {"}"}
+
+# Shut down when your app exits
+Flick.close</code></pre>
+
+  <h3>Key Differences from Other SDKs</h3>
+
+  <ul>
+    <li><strong>Flipper-style API</strong>: <code>Flick.enabled?(:flag, actor)</code> instead of <code>client.isEnabled("flag")</code></li>
+    <li><strong>Symbol keys</strong>: <code>:new_checkout</code> auto-converts to <code>"new-checkout"</code></li>
+    <li><strong>Actor protocol</strong>: <code>flick_id</code> + <code>flick_attributes</code> instead of a context hash</li>
+    <li><strong>Zero dependencies</strong>: stdlib only (<code>net/http</code>, <code>json</code>, <code>uri</code>)</li>
+    <li><strong>Ruby &gt;= 3.0</strong></li>
+  </ul>
 
   <hr />
 
