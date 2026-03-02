@@ -8,12 +8,11 @@ pub const CACHE_TTL_FLAGS: i64 = 60;
 pub const CACHE_TTL_FLAG: i64 = 60;
 pub const CACHE_TTL_API_KEY: i64 = 300;
 
-pub async fn connect(redis_url: &str) -> fred::clients::RedisPool {
-    let config = RedisConfig::from_url(redis_url).expect("Invalid REDIS_URL");
-    let pool = fred::clients::RedisPool::new(config, None, None, None, 4_usize)
-        .expect("Failed to create Redis pool");
-    let _handle = pool.init().await.expect("Failed to connect to Redis");
-    pool
+pub async fn connect(redis_url: &str) -> Result<fred::clients::RedisPool, RedisError> {
+    let config = RedisConfig::from_url(redis_url)?;
+    let pool = fred::clients::RedisPool::new(config, None, None, None, 4_usize)?;
+    let _handle = pool.init().await?;
+    Ok(pool)
 }
 
 pub async fn cache_get<T: DeserializeOwned>(redis: &fred::clients::RedisPool, key: &str) -> Option<T> {

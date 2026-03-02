@@ -28,16 +28,33 @@ async fn main() {
         .json()
         .init();
 
+    info!(port = config.port, host = %config.host, "Starting Flick server (Rust)");
+
     // Connect to PostgreSQL
-    let db = db::connect(&config.database_url).await;
+    info!("Connecting to PostgreSQL...");
+    let db = match db::connect(&config.database_url).await {
+        Ok(pool) => pool,
+        Err(e) => {
+            tracing::error!(error = %e, "Failed to connect to PostgreSQL");
+            std::process::exit(1);
+        }
+    };
     info!("Connected to PostgreSQL");
 
     // Run migrations
+    info!("Running migrations...");
     db::migrate::run(&db).await;
     info!("Migrations complete");
 
     // Connect to Redis
-    let redis = cache::connect(&config.redis_url).await;
+    info!("Connecting to Redis...");
+    let redis = match cache::connect(&config.redis_url).await {
+        Ok(pool) => pool,
+        Err(e) => {
+            tracing::error!(error = %e, "Failed to connect to Redis");
+            std::process::exit(1);
+        }
+    };
     info!("Connected to Redis");
 
     let state = app::AppState {
