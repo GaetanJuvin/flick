@@ -29,12 +29,16 @@ Flick lets you control feature rollouts across environments without deploying co
                │Postgres │  │  Redis   │
                └─────────┘  └──────────┘
                     ▲
-          ┌────────┴─────────┐
-          │                  │
-    ┌─────▼──────┐   ┌──────▼─────┐
-    │  TS SDK    │   │ Kotlin SDK │
-    │ (polling)  │   │ (polling)  │
-    └────────────┘   └────────────┘
+          ┌────────┼─────────┐
+          │        │         │
+    ┌─────▼──────┐ │  ┌──────▼─────┐
+    │  TS SDK    │ │  │ Kotlin SDK │
+    │ (polling)  │ │  │ (polling)  │
+    └────────────┘ │  └────────────┘
+             ┌─────▼─────┐
+             │ Ruby SDK  │
+             │ (polling) │
+             └───────────┘
 ```
 
 SDKs poll the API for flag configs, cache them in-memory, and evaluate locally. Your app never blocks on Flick — if the server goes down, SDKs keep serving the last known config.
@@ -64,12 +68,13 @@ Open http://localhost:4321 and log in.
 | `@flick/sdk` | `packages/sdk-typescript` | TypeScript SDK (polling + local eval) |
 | `@flick/mcp-server` | `packages/mcp-server` | MCP server for AI agents |
 | Kotlin SDK | `packages/sdk-kotlin` | Kotlin SDK (coroutine-based polling) |
+| `flick-ruby` | `packages/sdk-ruby` | Ruby SDK (Flipper-style API, zero deps) |
 
 ## Documentation
 
 | Doc | Description |
 |-----|-------------|
-| [SDK Guide](docs/SDK.md) | TypeScript & Kotlin SDK integration |
+| [SDK Guide](docs/SDK.md) | TypeScript, Kotlin & Ruby SDK integration |
 | [MCP Server](docs/MCP.md) | AI agent integration via Model Context Protocol |
 | [API Reference](docs/API.md) | REST API endpoints |
 | [Architecture](ARCHITECTURE.md) | System design, layers, data model |
