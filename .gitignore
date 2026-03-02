@@ -11,6 +11,9 @@ dist/
 packages/sdk-kotlin/build/
 packages/sdk-kotlin/.gradle/
 
+# Rust
+packages/server-rust/target/
+
 # IDE
 .idea/
 .vscode/
